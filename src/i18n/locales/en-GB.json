@@ -102,5 +102,25 @@
     "already_logged_subtitle": "You can edit today's entry any time.",
     "edit_today": "Edit today's entry",
     "saved_success": "Saved"
+  },
+  "pace": {
+    "title": "Today's energy envelope",
+    "available": "Available",
+    "spent": "Spent",
+    "budget_hint": "Your daily budget. Adjust it if today is a lower-capacity day.",
+    "over_budget": "Over budget for today",
+    "log_exertion": "Log exertion",
+    "exertion_type": "Type",
+    "type_physical": "Physical",
+    "type_cognitive": "Cognitive",
+    "type_emotional": "Emotional",
+    "type_social": "Social",
+    "intensity": "Intensity",
+    "duration_minutes": "Duration (minutes)",
+    "notes_optional": "Notes (optional)",
+    "add": "Add",
+    "todays_exertion": "Today's exertion",
+    "no_exertion_logged": "Nothing logged yet today.",
+    "remove": "Remove"
   }
 }

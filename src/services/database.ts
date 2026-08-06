@@ -1,5 +1,5 @@
 import { supabase } from '@/services/supabase';
-import { DailyLog } from '@/types';
+import { DailyLog, ExertionEvent, DailyEnvelope } from '@/types';
 
 // ─── Daily Logs ─────────────────────────────────────────────────────────────
 
@@ -56,6 +56,66 @@ export async function getDailyLogs(userId: string, days: number): Promise<DailyL
     console.error('getDailyLogs error:', err);
     throw err;
   }
+}
+
+// ─── Exertion Events ───────────────────────────────────────────────────────────
+
+export async function saveExertionEvent(event: Omit<ExertionEvent, 'id'>): Promise<ExertionEvent> {
+  const { data, error } = await supabase
+    .from('exertion_events')
+    .insert(event)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as ExertionEvent;
+}
+
+export async function getExertionEventsForDate(userId: string, date: string): Promise<ExertionEvent[]> {
+  const dayStart = `${date}T00:00:00`;
+  const dayEnd = `${date}T23:59:59`;
+
+  const { data, error } = await supabase
+    .from('exertion_events')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('occurred_at', dayStart)
+    .lte('occurred_at', dayEnd)
+    .order('occurred_at', { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []) as ExertionEvent[];
+}
+
+export async function deleteExertionEvent(id: string): Promise<void> {
+  const { error } = await supabase.from('exertion_events').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ─── Daily Envelope ─────────────────────────────────────────────────────────────
+
+export async function getDailyEnvelope(userId: string, date: string): Promise<DailyEnvelope | null> {
+  const { data, error } = await supabase
+    .from('daily_envelope')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('date', date)
+    .single();
+
+  if (error && error.code === 'PGRST116') return null;
+  if (error) throw error;
+  return data as DailyEnvelope;
+}
+
+export async function saveDailyEnvelope(envelope: Omit<DailyEnvelope, 'id'>): Promise<DailyEnvelope> {
+  const { data, error } = await supabase
+    .from('daily_envelope')
+    .upsert(envelope, { onConflict: 'user_id,date' })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as DailyEnvelope;
 }
 
 // ─── Streak ───────────────────────────────────────────────────────────────────
