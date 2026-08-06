@@ -37,6 +37,14 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 configureRevenueCat();
 import { ProfileProvider, useProfile } from '@/contexts/ProfileContext';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import * as Sentry from '@sentry/react-native';
+
+Sentry.init({
+  dsn: 'https://45eca0df6774afa2e0db96fa3ea87f75@o4511371993350144.ingest.de.sentry.io/4511863958274128',
+  // Session replay disabled — health app with sensitive user data
+  replaysSessionSampleRate: 0,
+  replaysOnErrorSampleRate: 0,
+});
 
 // Show notifications when app is in the foreground
 Notifications.setNotificationHandler({
@@ -117,7 +125,7 @@ function RootNavigator() {
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const [fontsLoaded] = useFonts({
     PlusJakartaSans_400Regular,
     PlusJakartaSans_500Medium,
@@ -142,3 +150,5 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+export default Sentry.wrap(RootLayout);
