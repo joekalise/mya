@@ -23,6 +23,7 @@ interface AuthContextValue {
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string) => Promise<void>;
   signInWithApple: () => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
 }
@@ -147,6 +148,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
   }, []);
 
+  const signInWithGoogle = useCallback(async () => {
+    const redirectUrl = AuthSession.makeRedirectUri({ scheme: 'mya' });
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectUrl,
+        skipBrowserRedirect: true,
+      },
+    });
+
+    if (error) throw error;
+    if (!data.url) throw new Error('No OAuth URL returned');
+
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+
+    if (result.type === 'success' && result.url) {
+      // Try PKCE flow first (code in query params)
+      const urlParams = new URL(result.url);
+      const code = urlParams.searchParams.get('code');
+
+      if (code) {
+        const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
+        if (sessionError) throw sessionError;
+      } else {
+        // Fall back to implicit flow (tokens in URL fragment)
+        const fragment = result.url.split('#')[1] ?? '';
+        const params = new URLSearchParams(fragment);
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+        if (accessToken && refreshToken) {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          if (sessionError) throw sessionError;
+        }
+      }
+    }
+  }, []);
+
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
@@ -168,6 +210,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signInWithEmail,
         signUpWithEmail,
         signInWithApple,
+        signInWithGoogle,
         signOut,
         resetPassword,
       }}

@@ -14,6 +14,7 @@
     "sign_in_button": "Sign in",
     "sign_up_button": "Sign up",
     "apple_button": "Continue with Apple",
+    "google_button": "Continue with Google",
     "forgot_password": "Forgot password?",
     "no_account": "Don't have an account?",
     "have_account": "Already have an account?",
