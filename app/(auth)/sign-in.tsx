@@ -191,8 +191,8 @@ const styles = StyleSheet.create({
   },
   googleLabel: {
     fontSize: FontSize.lg,
-    fontWeight: '600',
-    fontFamily: FontFamily.semiBold,
+    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: '#3C4043',
   },
   googleLabelDark: {
