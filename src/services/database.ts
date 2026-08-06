@@ -1,5 +1,5 @@
 import { supabase } from '@/services/supabase';
-import { DailyLog, ExertionEvent, DailyEnvelope, Crash } from '@/types';
+import { DailyLog, ExertionEvent, DailyEnvelope, Crash, DsqSfScore } from '@/types';
 
 // ─── Daily Logs ─────────────────────────────────────────────────────────────
 
@@ -168,6 +168,32 @@ export async function saveDailyEnvelope(envelope: Omit<DailyEnvelope, 'id'>): Pr
 
   if (error) throw error;
   return data as DailyEnvelope;
+}
+
+// ─── DSQ-SF ─────────────────────────────────────────────────────────────────────
+
+export async function saveDsqSfScore(score: Omit<DsqSfScore, 'id'>): Promise<DsqSfScore> {
+  const { data, error } = await supabase
+    .from('dsq_sf_scores')
+    .upsert(score, { onConflict: 'user_id,date' })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as DsqSfScore;
+}
+
+export async function getLatestDsqSfScore(userId: string): Promise<DsqSfScore | null> {
+  const { data, error } = await supabase
+    .from('dsq_sf_scores')
+    .select('*')
+    .eq('user_id', userId)
+    .order('date', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data as DsqSfScore | null;
 }
 
 // ─── Streak ───────────────────────────────────────────────────────────────────

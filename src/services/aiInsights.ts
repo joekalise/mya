@@ -1,0 +1,151 @@
+import { supabase } from '@/services/supabase';
+import { DailyLog, ExertionEvent, Crash, UserProfile } from '@/types';
+
+export interface WeeklyInsight {
+  summary: string;
+  points: Array<{ title: string; detail: string }>;
+}
+
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+
+async function callClaude(body: object): Promise<string> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/claude-proxy`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session?.access_token ?? SUPABASE_ANON_KEY}`,
+      'apikey': SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throw new Error(`Claude proxy error: ${response.status}`);
+  const data = await response.json();
+  if (!data?.text) throw new Error('No text in Claude proxy response');
+  return data.text;
+}
+
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr + 'T12:00:00');
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function buildDataSummary(logs: DailyLog[], exertionEvents: ExertionEvent[], crashes: Crash[]): string {
+  if (logs.length === 0) {
+    return 'No tracking data available for this period.';
+  }
+
+  const avgBell = logs.filter((l) => l.bell_score_today !== null);
+  const avgBellScore = avgBell.length > 0
+    ? (avgBell.reduce((s, l) => s + (l.bell_score_today ?? 0), 0) / avgBell.length).toFixed(0)
+    : null;
+  const avgFatigue = (logs.reduce((s, l) => s + l.fatigue_score, 0) / logs.length).toFixed(1);
+
+  const cognitiveLogs = logs.filter((l) => l.cognitive_dysfunction_score !== null);
+  const avgCognitive = cognitiveLogs.length > 0
+    ? (cognitiveLogs.reduce((s, l) => s + (l.cognitive_dysfunction_score ?? 0), 0) / cognitiveLogs.length).toFixed(1)
+    : null;
+
+  const pemDays = logs.filter((l) => l.pem_today).length;
+
+  const notes = logs
+    .filter((l) => l.notes && l.notes.trim().length > 0)
+    .map((l) => `  [${formatDate(l.date)}] ${l.notes.trim()}`)
+    .join('\n');
+
+  const exertionSummary = exertionEvents.length === 0
+    ? 'No exertion events logged in this period.'
+    : exertionEvents
+        .map((e) => `  - ${new Date(e.occurred_at).toLocaleDateString('en-GB')} (${e.exertion_type}, intensity ${e.intensity}${e.duration_minutes ? `, ${e.duration_minutes}min` : ''})`)
+        .join('\n');
+
+  const crashSummary = crashes.length === 0
+    ? 'No crashes logged in this period.'
+    : crashes
+        .map((c) => `  - ${formatDate(c.start_date)} to ${c.end_date ? formatDate(c.end_date) : 'ongoing'} (${c.severity}${c.pem_delay_hours !== null ? `, ${c.pem_delay_hours}h after exertion` : ''}, symptoms: ${c.symptoms.join(', ') || 'none noted'})`)
+        .join('\n');
+
+  return `
+TRACKING DATA SUMMARY (last 28 days, ${logs.length} days logged):
+- Average functional level (Bell scale): ${avgBellScore ?? 'not recorded'}/100
+- Average fatigue: ${avgFatigue}/10
+${avgCognitive ? `- Average cognitive dysfunction: ${avgCognitive}/10` : ''}
+- Crash (PEM) days: ${pemDays} of ${logs.length} logged days
+
+EXERTION EVENTS:
+${exertionSummary}
+
+CRASHES:
+${crashSummary}
+
+USER NOTES (free text from check-ins):
+${notes || '  None'}
+`.trim();
+}
+
+function buildProfileSummary(profile: UserProfile): string {
+  return `
+USER PROFILE:
+- Diagnosis criteria: ${profile.diagnosis_criteria ?? 'not specified'}
+- Baseline functional level (Bell scale): ${profile.bell_score_baseline ?? 'not specified'}
+- Typical PEM onset delay: ${profile.pem_onset_delay ?? 'not specified'}
+- Typical PEM duration: ${profile.pem_duration_typical ?? 'not specified'}
+- Mobility status: ${profile.mobility_status ?? 'not specified'}
+- Primary symptoms: ${profile.primary_symptoms?.join(', ') || 'none specified'}
+- Comorbidities: ${profile.comorbidities?.join(', ') || 'none'}
+${profile.ai_context ? `- Additional context from user: ${profile.ai_context}` : ''}
+`.trim();
+}
+
+export async function generateWeeklyInsight(params: {
+  logs: DailyLog[];
+  exertionEvents: ExertionEvent[];
+  crashes: Crash[];
+  profile: UserProfile;
+}): Promise<WeeklyInsight> {
+  const { logs, exertionEvents, crashes, profile } = params;
+
+  const systemPrompt = `You are Mya, a data analyst for someone living with ME/CFS. Your job is to find the strongest correlations between exertion, post-exertional malaise (PEM) crashes, and daily function — not to reassure, but to produce something the user could show a doctor who doubts them.
+
+Respond with a JSON object in exactly this structure:
+{
+  "summary": "2-3 sentences on the single strongest pattern this period. Always include real numbers.",
+  "points": [
+    { "title": "3-5 word title", "detail": "2-3 sentences." },
+    { "title": "3-5 word title", "detail": "2-3 sentences." },
+    { "title": "3-5 word title", "detail": "2-3 sentences." }
+  ]
+}
+
+RULES:
+1. Prioritize PEM correlations: does exertion (by type/intensity) precede crashes by a consistent delay? Use the format "on days when X, Y averaged..." wherever possible.
+2. Every insight must include a real number — averages, day counts, hours of delay. Never write vague statements without a number attached.
+3. Be honest and direct, not reassuring. If a pattern is concerning, say so plainly.
+4. Never diagnose, never say "you are at risk", never recommend specific medications.
+5. Use language like "your data shows" and "in your case" — this is evidence, not advice.
+6. 3 points always. Valid JSON only, no markdown, no text outside the JSON.`;
+
+  const userMessage = `Here is my health data:
+
+${buildProfileSummary(profile)}
+
+${buildDataSummary(logs, exertionEvents, crashes)}`;
+
+  try {
+    const text = await callClaude({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+      messages: [{ role: 'user', content: userMessage }],
+    });
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON found in response');
+
+    return JSON.parse(jsonMatch[0]) as WeeklyInsight;
+  } catch (err) {
+    console.error('generateWeeklyInsight error:', err);
+    throw new Error('AI insights are temporarily unavailable. The rest of the app is working normally.');
+  }
+}

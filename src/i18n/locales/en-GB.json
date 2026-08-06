@@ -149,5 +149,41 @@
     "days_one": "{{count}} day",
     "days_other": "{{count}} days",
     "delay_hours": "{{count}}h after exertion"
+  },
+  "insights": {
+    "title": "Insights",
+    "ai_card_title": "AI Insight",
+    "generate": "Generate this week's insight",
+    "generating": "Analysing your data...",
+    "not_enough_data": "Log a few more days to get an insight.",
+    "dsq_sf_card_title": "DSQ-SF Assessment",
+    "dsq_sf_card_body": "The DePaul Symptom Questionnaire — Short Form, the validated ME/CFS research instrument.",
+    "dsq_sf_last_taken": "Last taken {{date}}",
+    "dsq_sf_never_taken": "Never taken",
+    "take_assessment": "Take assessment"
+  },
+  "dsq_sf": {
+    "title": "DSQ-SF Assessment",
+    "subtitle": "For each symptom, rate how often it has bothered you over the past 6 months, and how severe it was.",
+    "frequency_label": "Frequency",
+    "frequency_legend": "0 = none of the time, 4 = all of the time",
+    "severity_label": "Severity",
+    "severity_legend": "0 = not present, 4 = very severe",
+    "item_fatigue": "Fatigue / extreme tiredness",
+    "item_next_day_soreness": "Next day soreness or fatigue after non-strenuous, everyday activities",
+    "item_minimum_exercise_tired": "Minimum exercise makes you physically tired",
+    "item_unrefreshed_on_waking": "Feeling unrefreshed after you wake up in the morning",
+    "item_muscle_pain": "Pain or aching in your muscles",
+    "item_bloating": "Bloating",
+    "item_memory_problems": "Problems remembering things",
+    "item_attention_difficulty": "Difficulty paying attention for a long period of time",
+    "item_irritable_bowel": "Irritable bowel problems",
+    "item_unsteady_on_feet": "Feeling unsteady on your feet, like you might fall",
+    "item_cold_limbs": "Cold limbs (arms, legs, hands)",
+    "item_hot_or_cold_for_no_reason": "Feeling hot or cold for no reason",
+    "item_flu_like_symptoms": "Flu-like symptoms",
+    "item_sensory_chemical_reaction": "Some smells, foods, medications, or chemicals make you feel sick",
+    "save": "Save assessment",
+    "attribution": "DePaul Symptom Questionnaire — Short Form, developed by Leonard A. Jason, PhD, DePaul University."
   }
 }
