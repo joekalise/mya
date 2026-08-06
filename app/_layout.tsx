@@ -90,7 +90,7 @@ function RootNavigator() {
     if (isLoading) return;
 
     if (!session) {
-      if (!inAuthGroup) router.replace('/(auth)/sign-in');
+      if (!inAuthGroup) router.replace('/(auth)/sign-up');
     } else if (!isOnboardingComplete) {
       if (!inOnboardingGroup) router.replace('/(onboarding)');
     } else {
