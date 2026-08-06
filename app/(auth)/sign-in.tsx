@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderDark,
   },
   googleLabel: {
-    fontSize: FontSize.lg,
+    fontSize: FontSize.xl,
     fontWeight: '700',
     fontFamily: FontFamily.bold,
     color: '#3C4043',
