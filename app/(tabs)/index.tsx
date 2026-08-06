@@ -30,18 +30,6 @@ function todayDateLabel(): string {
   });
 }
 
-const SYMPTOM_FLAGS = [
-  'dizzy_on_standing',
-  'palpitations',
-  'unsteady_on_feet',
-  'cold_limbs',
-  'temperature_dysregulation',
-  'flu_like_symptoms',
-  'sensory_chemical_reaction',
-] as const;
-
-type SymptomFlag = (typeof SYMPTOM_FLAGS)[number];
-
 export default function TodayScreen() {
   const { t } = useTranslation();
   const isDark = useColorScheme() === 'dark';
@@ -54,10 +42,8 @@ export default function TodayScreen() {
   const [bellScore, setBellScore] = useState(70);
   const [fatigueScore, setFatigueScore] = useState(0);
   const [cognitiveScore, setCognitiveScore] = useState(0);
-  const [painScore, setPainScore] = useState(0);
   const [wokeRested, setWokeRested] = useState<boolean | null>(null);
   const [pemToday, setPemToday] = useState(false);
-  const [flags, setFlags] = useState<Set<SymptomFlag>>(new Set());
   const [medsTaken, setMedsTaken] = useState<MedsTaken>('yes');
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -68,29 +54,14 @@ export default function TodayScreen() {
       setBellScore(todayLog.bell_score_today ?? 70);
       setFatigueScore(todayLog.fatigue_score);
       setCognitiveScore(todayLog.cognitive_dysfunction_score ?? 0);
-      setPainScore(todayLog.pain_score ?? 0);
       setWokeRested(todayLog.woke_rested ?? null);
       setPemToday(todayLog.pem_today);
-      const nextFlags = new Set<SymptomFlag>();
-      SYMPTOM_FLAGS.forEach((f) => {
-        if (todayLog[f]) nextFlags.add(f);
-      });
-      setFlags(nextFlags);
       setMedsTaken(todayLog.medications_taken ?? 'yes');
       setNotes(todayLog.notes ?? '');
     }
     setEditing(false);
     setSaved(false);
   }, [todayLog]);
-
-  const toggleFlag = (flag: SymptomFlag) => {
-    setFlags((prev) => {
-      const next = new Set(prev);
-      if (next.has(flag)) next.delete(flag);
-      else next.add(flag);
-      return next;
-    });
-  };
 
   const handleSave = async () => {
     if (!user) return;
@@ -101,16 +72,16 @@ export default function TodayScreen() {
         bell_score_today: bellScore,
         fatigue_score: fatigueScore,
         cognitive_dysfunction_score: cognitiveScore,
-        pain_score: painScore,
+        pain_score: null,
         woke_rested: wokeRested,
         pem_today: pemToday,
-        dizzy_on_standing: flags.has('dizzy_on_standing'),
-        palpitations: flags.has('palpitations'),
-        unsteady_on_feet: flags.has('unsteady_on_feet'),
-        cold_limbs: flags.has('cold_limbs'),
-        temperature_dysregulation: flags.has('temperature_dysregulation'),
-        flu_like_symptoms: flags.has('flu_like_symptoms'),
-        sensory_chemical_reaction: flags.has('sensory_chemical_reaction'),
+        dizzy_on_standing: null,
+        palpitations: null,
+        unsteady_on_feet: null,
+        cold_limbs: null,
+        temperature_dysregulation: null,
+        flu_like_symptoms: null,
+        sensory_chemical_reaction: null,
         medications_taken: medsTaken,
         notes,
       });
@@ -197,12 +168,6 @@ export default function TodayScreen() {
               <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('tracker.cognitive_dysfunction_score_hint')}</Text>
             </View>
 
-            <View style={[styles.section, isDark && styles.sectionDark]}>
-              <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('tracker.pain_score')}</Text>
-              <DragSlider value={painScore} onChange={setPainScore} isDark={isDark} />
-              <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('tracker.pain_score_hint')}</Text>
-            </View>
-
             <View style={[styles.section, isDark && styles.sectionDark, styles.pemSection]}>
               <View style={styles.rowBetween}>
                 <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark, styles.pemLabel]}>
@@ -231,27 +196,6 @@ export default function TodayScreen() {
                 />
               </View>
               <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('tracker.woke_rested_hint')}</Text>
-            </View>
-
-            <View style={[styles.section, isDark && styles.sectionDark]}>
-              <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('tracker.other_symptoms_today')}</Text>
-              <View style={styles.chipRow}>
-                {SYMPTOM_FLAGS.map((flag) => {
-                  const selected = flags.has(flag);
-                  return (
-                    <TouchableOpacity
-                      key={flag}
-                      onPress={() => toggleFlag(flag)}
-                      activeOpacity={0.7}
-                      style={[styles.chip, isDark && styles.chipDark, selected && styles.chipSelected]}
-                    >
-                      <Text style={[styles.chipText, isDark && !selected && styles.chipTextDark, selected && styles.chipTextSelected]}>
-                        {t(`tracker.${flag}`)}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
             </View>
 
             <View style={[styles.section, isDark && styles.sectionDark]}>
@@ -362,20 +306,6 @@ const styles = StyleSheet.create({
   pemSection: { borderColor: Colors.error + '50' },
   pemLabel: { marginBottom: 0 },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  chip: {
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.full,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-  },
-  chipDark: { borderColor: Colors.borderDark },
-  chipSelected: { backgroundColor: Colors.primaryLight, borderColor: Colors.primary },
-  chipText: { fontSize: FontSize.sm, color: Colors.textPrimary },
-  chipTextDark: { color: Colors.textPrimaryDark },
-  chipTextSelected: { color: Colors.primaryDark, fontWeight: '700', fontFamily: FontFamily.bold },
 
   medsRow: { flexDirection: 'row', gap: Spacing.sm },
   medsButton: {
