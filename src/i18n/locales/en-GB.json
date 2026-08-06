@@ -22,9 +22,46 @@
     "sign_in_link": "Sign in"
   },
   "onboarding": {
-    "placeholder_title": "Let's set up your profile",
-    "placeholder_body": "The full onboarding flow is still being built. Tap continue for now to reach the app.",
-    "continue_button": "Continue"
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish",
+    "primary_symptoms": {
+      "title": "What are your main symptoms?",
+      "subtitle": "Select everything that applies. You can change this any time in your profile.",
+      "fatigue": "Fatigue / extreme tiredness",
+      "pem": "Post-exertional malaise (PEM)",
+      "unrefreshing_sleep": "Unrefreshing sleep",
+      "cognitive_dysfunction": "Cognitive dysfunction (brain fog)",
+      "orthostatic_intolerance": "Orthostatic intolerance (dizzy on standing)",
+      "pain": "Pain",
+      "sensory_sensitivity": "Sensory sensitivity (light, sound, touch)",
+      "temperature_dysregulation": "Temperature dysregulation",
+      "immune_flulike": "Flu-like / immune symptoms",
+      "gi_issues": "GI issues"
+    },
+    "bell_score_baseline": {
+      "title": "How would you describe your typical day?",
+      "subtitle": "This is the Bell CFS Disability Scale, the scale most ME/CFS clinicians and patients use. Pick whichever description feels closest most days.",
+      "100": "100 — No symptoms at rest, no symptoms with exercise, normal overall activity, able to work full-time",
+      "90": "90 — No symptoms at rest, mild symptoms with activity, normal overall activity, able to work full-time",
+      "80": "80 — Mild symptoms at rest, symptoms worsened by exertion, minimal activity restriction for exertion only",
+      "70": "70 — Mild symptoms at rest, some daily activity limitation, functions close to 90% of expected",
+      "60": "60 — Mild to moderate symptoms at rest, daily activity limitation, functions 70-90%, can't work full-time in physical jobs",
+      "50": "50 — Moderate symptoms at rest, moderate to severe with exercise, overall activity level 70% of expected",
+      "40": "40 — Moderate symptoms at rest, moderate to severe with exercise, overall activity level 50-70% of expected",
+      "30": "30 — Moderate to severe symptoms at rest, severe with any exercise, overall activity reduced to 50% of expected",
+      "20": "20 — Moderate to severe symptoms at rest, unable to do strenuous activity, overall activity 30-50% of expected",
+      "10": "10 — Severe symptoms at rest, bedridden most of the time, no travel outside the house",
+      "0": "0 — Severe symptoms continuously, bedridden constantly, unable to care for self"
+    },
+    "pem_onset_delay": {
+      "title": "When do symptoms usually hit after exertion?",
+      "subtitle": "PEM often doesn't show up right away. Knowing your pattern helps Mya link crashes back to what actually caused them.",
+      "same_day": "The same day",
+      "next_day": "The next day",
+      "24_72h": "24 to 72 hours later",
+      "variable": "It varies, no clear pattern"
+    }
   },
   "placeholder_screen": {
     "coming_soon": "Coming soon"
