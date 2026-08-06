@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   label: {
-    fontSize: FontSize.md,
+    fontSize: FontSize.lg,
     fontWeight: '600',
     fontFamily: FontFamily.semiBold,
   },

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, useColorScheme, Platform, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, StyleSheet, useColorScheme, Platform, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -58,10 +58,17 @@ export default function SignInScreen() {
 
   return (
     <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
-      <View style={styles.content}>
-        <Text style={[styles.title, isDark && styles.titleDark]}>
-          {t('auth.sign_in_title')}
-        </Text>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <Image source={require('../../assets/icon.png')} style={styles.logo} />
+          <Text style={[styles.title, isDark && styles.titleDark]}>
+            {t('auth.sign_in_title')}
+          </Text>
+        </View>
 
         {error && <ErrorMessage message={error} />}
 
@@ -128,7 +135,7 @@ export default function SignInScreen() {
             <Text style={styles.linkText}>{t('auth.create_account_link')}</Text>
           </Link>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -136,12 +143,19 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   containerDark: { backgroundColor: Colors.backgroundDark },
-  content: { flex: 1, justifyContent: 'center', padding: Spacing.lg, gap: Spacing.md },
+  content: { flexGrow: 1, padding: Spacing.lg, paddingTop: Spacing.xxl, gap: Spacing.md },
+  header: { alignItems: 'center', marginBottom: Spacing.md },
+  logo: {
+    width: 64,
+    height: 64,
+    borderRadius: BorderRadius.lg,
+    marginBottom: Spacing.md,
+  },
   title: {
     fontSize: FontSize.xxl,
     fontFamily: FontFamily.extraBold,
     color: Colors.textPrimary,
-    marginBottom: Spacing.md,
+    textAlign: 'center',
   },
   titleDark: { color: Colors.textPrimaryDark },
   input: {
@@ -172,11 +186,11 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   googleButtonDark: {
-    backgroundColor: '#1F1F1F',
-    borderColor: '#5F6368',
+    backgroundColor: Colors.surfaceDark,
+    borderColor: Colors.borderDark,
   },
   googleLabel: {
-    fontSize: FontSize.md,
+    fontSize: FontSize.lg,
     fontWeight: '600',
     fontFamily: FontFamily.semiBold,
     color: '#3C4043',
@@ -185,8 +199,8 @@ const styles = StyleSheet.create({
     color: '#E8EAED',
   },
   link: { alignSelf: 'center', marginTop: Spacing.sm },
-  linkText: { color: Colors.primary, fontFamily: FontFamily.semiBold, fontSize: FontSize.sm },
+  linkText: { color: Colors.primary, fontFamily: FontFamily.semiBold, fontSize: FontSize.md },
   footerRow: { flexDirection: 'row', justifyContent: 'center', marginTop: Spacing.md },
-  footerText: { color: Colors.textSecondary, fontFamily: FontFamily.regular },
-  footerTextDark: { color: Colors.textSecondaryDark, fontFamily: FontFamily.regular },
+  footerText: { color: Colors.textSecondary, fontFamily: FontFamily.regular, fontSize: FontSize.md },
+  footerTextDark: { color: Colors.textSecondaryDark, fontFamily: FontFamily.regular, fontSize: FontSize.md },
 });
