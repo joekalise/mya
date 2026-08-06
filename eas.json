@@ -1,0 +1,60 @@
+{
+  "cli": {
+    "version": ">= 18.11.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "image": "latest"
+      },
+      "channel": "development"
+    },
+    "preview": {
+      "distribution": "internal",
+      "ios": {
+        "image": "latest"
+      },
+      "channel": "preview"
+    },
+    "production": {
+      "autoIncrement": true,
+      "ios": {
+        "image": "latest"
+      },
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://sceennogakzhsfhcoyzm.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_P1SmhfqjGyA__OV1iJIEKw_ei8D1yuv",
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_xDXDjXbGFLjkcqjuYYoJykrSsSN",
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "PENDING_REVENUECAT_PROJECT",
+        "SENTRY_ALLOW_FAILURE": "true"
+      }
+    },
+    "production-android": {
+      "autoIncrement": true,
+      "android": {
+        "image": "latest",
+        "buildType": "app-bundle"
+      },
+      "channel": "production",
+      "env": {
+        "EAS_BUILD_PLATFORM": "android",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://sceennogakzhsfhcoyzm.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_P1SmhfqjGyA__OV1iJIEKw_ei8D1yuv",
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_xDXDjXbGFLjkcqjuYYoJykrSsSN",
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "PENDING_REVENUECAT_PROJECT",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "6798615794"
+      }
+    }
+  }
+}

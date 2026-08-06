@@ -1,0 +1,31 @@
+{
+  "tabs": {
+    "today": "Today",
+    "pace": "Pace",
+    "crashes": "Crashes",
+    "insights": "Insights",
+    "profile": "Profile"
+  },
+  "auth": {
+    "sign_in_title": "Welcome back",
+    "sign_up_title": "Create your account",
+    "email_label": "Email",
+    "password_label": "Password",
+    "sign_in_button": "Sign in",
+    "sign_up_button": "Sign up",
+    "apple_button": "Continue with Apple",
+    "forgot_password": "Forgot password?",
+    "no_account": "Don't have an account?",
+    "have_account": "Already have an account?",
+    "create_account_link": "Create one",
+    "sign_in_link": "Sign in"
+  },
+  "onboarding": {
+    "placeholder_title": "Let's set up your profile",
+    "placeholder_body": "The full onboarding flow is still being built. Tap continue for now to reach the app.",
+    "continue_button": "Continue"
+  },
+  "placeholder_screen": {
+    "coming_soon": "Coming soon"
+  }
+}
