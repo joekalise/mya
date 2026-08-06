@@ -1,10 +1,282 @@
-import { PlaceholderScreen } from '@/components/common/PlaceholderScreen';
+import React, { useState, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  useColorScheme,
+  Alert,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/common/Button';
+import { Colors } from '@/constants/colors';
+import { FontSize, Spacing, BorderRadius, FontFamily } from '@/constants/theme';
+import { useCrashes } from '@/hooks/useCrashes';
+import { CrashSeverity, Crash } from '@/types';
+
+const SEVERITIES: CrashSeverity[] = ['mild', 'moderate', 'severe'];
+const CRASH_SYMPTOMS = [
+  'fatigue',
+  'pem',
+  'cognitive_dysfunction',
+  'pain',
+  'orthostatic_intolerance',
+  'sensory_sensitivity',
+];
+
+function toggleMulti<T>(arr: T[], val: T): T[] {
+  return arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val];
+}
+
+function daysSince(dateStr: string): number {
+  const start = new Date(dateStr + 'T00:00:00');
+  const now = new Date();
+  return Math.max(1, Math.ceil((now.getTime() - start.getTime()) / 86400000));
+}
+
+function dateLabel(dateStr: string): string {
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
+function severityColor(severity: CrashSeverity | null): string {
+  if (severity === 'severe') return Colors.error;
+  if (severity === 'moderate') return Colors.warning;
+  return Colors.success;
+}
 
 export default function CrashesScreen() {
+  const { t } = useTranslation();
+  const isDark = useColorScheme() === 'dark';
+  const { crashes, activeCrash, recentExertionEvents, isLoading, startCrash, endActiveCrash, refresh } = useCrashes();
+
+  useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
+
+  const [severity, setSeverity] = useState<CrashSeverity>('moderate');
+  const [symptoms, setSymptoms] = useState<string[]>([]);
+  const [triggerEventId, setTriggerEventId] = useState<string | null>(null);
+  const [notes, setNotes] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [isEnding, setIsEnding] = useState(false);
+
+  const handleStart = async () => {
+    setIsSaving(true);
+    try {
+      await startCrash(severity, symptoms, notes, triggerEventId);
+      setSymptoms([]);
+      setNotes('');
+      setTriggerEventId(null);
+    } catch {
+      Alert.alert('Failed to save crash');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleEnd = async () => {
+    setIsEnding(true);
+    try {
+      await endActiveCrash();
+    } catch {
+      Alert.alert('Failed to end crash');
+    } finally {
+      setIsEnding(false);
+    }
+  };
+
+  const pastCrashes = crashes.filter((c) => c.id !== activeCrash?.id);
+
+  if (isLoading) {
+    return <SafeAreaView style={[styles.screen, isDark && styles.screenDark]} />;
+  }
+
   return (
-    <PlaceholderScreen
-      title="Crashes"
-      body="PEM crash log, linked back to the exertion event that likely triggered it, goes here."
-    />
+    <SafeAreaView style={[styles.screen, isDark && styles.screenDark]}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {activeCrash ? (
+          <View style={[styles.activeCard, isDark && styles.activeCardDark]}>
+            <Text style={styles.activeTitle}>⚠ {t('crashes.active_title')}</Text>
+            <Text style={[styles.activeSince, isDark && styles.textSecDark]}>
+              {t('crashes.active_since')} {dateLabel(activeCrash.start_date)} · {t(
+                daysSince(activeCrash.start_date) === 1 ? 'crashes.days_one' : 'crashes.days_other',
+                { count: daysSince(activeCrash.start_date) }
+              )}
+            </Text>
+            <Button label={t('crashes.end_crash')} onPress={handleEnd} isLoading={isEnding} variant="outline" />
+          </View>
+        ) : (
+          <View style={[styles.section, isDark && styles.sectionDark]}>
+            <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('crashes.start_crash')}</Text>
+
+            <Text style={[styles.fieldLabel, isDark && styles.textSecDark]}>{t('crashes.severity')}</Text>
+            <View style={styles.chipRow}>
+              {SEVERITIES.map((v) => {
+                const selected = severity === v;
+                return (
+                  <TouchableOpacity
+                    key={v}
+                    onPress={() => setSeverity(v)}
+                    style={[styles.chip, isDark && styles.chipDark, selected && styles.chipSelected]}
+                  >
+                    <Text style={[styles.chipText, isDark && !selected && styles.chipTextDark, selected && styles.chipTextSelected]}>
+                      {t(`crashes.severity_${v}`)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={[styles.fieldLabel, isDark && styles.textSecDark]}>{t('crashes.symptoms')}</Text>
+            <View style={styles.chipRow}>
+              {CRASH_SYMPTOMS.map((v) => {
+                const selected = symptoms.includes(v);
+                return (
+                  <TouchableOpacity
+                    key={v}
+                    onPress={() => setSymptoms((arr) => toggleMulti(arr, v))}
+                    style={[styles.chip, isDark && styles.chipDark, selected && styles.chipSelected]}
+                  >
+                    <Text style={[styles.chipText, isDark && !selected && styles.chipTextDark, selected && styles.chipTextSelected]}>
+                      {t(`crashes.symptom_${v}`)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={[styles.fieldLabel, isDark && styles.textSecDark]}>{t('crashes.likely_trigger')}</Text>
+            <View style={styles.chipRow}>
+              <TouchableOpacity
+                onPress={() => setTriggerEventId(null)}
+                style={[styles.chip, isDark && styles.chipDark, triggerEventId === null && styles.chipSelected]}
+              >
+                <Text style={[styles.chipText, isDark && triggerEventId !== null && styles.chipTextDark, triggerEventId === null && styles.chipTextSelected]}>
+                  {t('crashes.no_trigger')}
+                </Text>
+              </TouchableOpacity>
+              {recentExertionEvents.map((event) => {
+                const selected = triggerEventId === event.id;
+                return (
+                  <TouchableOpacity
+                    key={event.id}
+                    onPress={() => setTriggerEventId(event.id ?? null)}
+                    style={[styles.chip, isDark && styles.chipDark, selected && styles.chipSelected]}
+                  >
+                    <Text style={[styles.chipText, isDark && !selected && styles.chipTextDark, selected && styles.chipTextSelected]}>
+                      {t(`pace.type_${event.exertion_type}`)} · {new Date(event.occurred_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <TextInput
+              style={[styles.notesInput, isDark && styles.notesInputDark]}
+              placeholder={t('crashes.notes_optional')}
+              placeholderTextColor={isDark ? Colors.textSecondaryDark : Colors.textSecondary}
+              value={notes}
+              onChangeText={setNotes}
+            />
+
+            <Button label={t('crashes.save')} onPress={handleStart} isLoading={isSaving} />
+          </View>
+        )}
+
+        <View style={[styles.section, isDark && styles.sectionDark]}>
+          <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('crashes.history')}</Text>
+          {pastCrashes.length === 0 ? (
+            <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('crashes.no_crashes_logged')}</Text>
+          ) : (
+            pastCrashes.map((crash: Crash) => (
+              <View key={crash.id} style={[styles.crashRow, isDark && styles.crashRowDark]}>
+                <View style={[styles.severityDot, { backgroundColor: severityColor(crash.severity) }]} />
+                <View style={styles.crashInfo}>
+                  <Text style={[styles.crashTitle, isDark && styles.textPrimaryDark]}>
+                    {dateLabel(crash.start_date)}
+                    {crash.end_date ? ` – ${dateLabel(crash.end_date)}` : ` (${t('crashes.ongoing')})`}
+                  </Text>
+                  {crash.pem_delay_hours !== null && (
+                    <Text style={[styles.crashMeta, isDark && styles.textSecDark]}>
+                      {t('crashes.delay_hours', { count: crash.pem_delay_hours })}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            ))
+          )}
+        </View>
+
+        <View style={styles.bottomPad} />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: Colors.background },
+  screenDark: { backgroundColor: Colors.backgroundDark },
+  scrollContent: { padding: Spacing.lg, gap: Spacing.md },
+  textPrimaryDark: { color: Colors.textPrimaryDark },
+  textSecDark: { color: Colors.textSecondaryDark },
+
+  activeCard: {
+    backgroundColor: Colors.error + '15',
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.error + '50',
+    padding: Spacing.md,
+    gap: Spacing.sm,
+  },
+  activeCardDark: { backgroundColor: Colors.error + '22' },
+  activeTitle: { fontSize: FontSize.md, fontWeight: '800', fontFamily: FontFamily.extraBold, color: Colors.error },
+  activeSince: { fontSize: FontSize.sm, color: Colors.textSecondary },
+
+  section: {
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: Spacing.md,
+    gap: Spacing.sm,
+  },
+  sectionDark: { backgroundColor: Colors.surfaceDark, borderColor: Colors.borderDark },
+  sectionLabel: { fontSize: FontSize.md, fontWeight: '700', fontFamily: FontFamily.bold, color: Colors.textPrimary },
+  fieldLabel: { fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: Spacing.xs },
+  hint: { fontSize: FontSize.xs, color: Colors.textSecondary },
+
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  chip: {
+    borderWidth: 1.5, borderColor: Colors.border, borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
+  },
+  chipDark: { borderColor: Colors.borderDark },
+  chipSelected: { backgroundColor: Colors.primaryLight, borderColor: Colors.primary },
+  chipText: { fontSize: FontSize.sm, color: Colors.textPrimary },
+  chipTextDark: { color: Colors.textPrimaryDark },
+  chipTextSelected: { color: Colors.primaryDark, fontWeight: '700', fontFamily: FontFamily.bold },
+
+  notesInput: {
+    borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.md,
+    padding: Spacing.md, fontSize: FontSize.md, fontFamily: FontFamily.regular, color: Colors.textPrimary,
+  },
+  notesInputDark: { borderColor: Colors.borderDark, color: Colors.textPrimaryDark, backgroundColor: Colors.surfaceDark },
+
+  crashRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm,
+    paddingVertical: Spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.border,
+  },
+  crashRowDark: { borderTopColor: Colors.borderDark },
+  severityDot: { width: 10, height: 10, borderRadius: 5, marginTop: 4 },
+  crashInfo: { flex: 1 },
+  crashTitle: { fontSize: FontSize.sm, fontWeight: '600', fontFamily: FontFamily.semiBold, color: Colors.textPrimary },
+  crashMeta: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 2 },
+
+  bottomPad: { height: Spacing.xxl },
+});

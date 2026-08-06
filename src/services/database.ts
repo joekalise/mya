@@ -1,5 +1,5 @@
 import { supabase } from '@/services/supabase';
-import { DailyLog, ExertionEvent, DailyEnvelope } from '@/types';
+import { DailyLog, ExertionEvent, DailyEnvelope, Crash } from '@/types';
 
 // ─── Daily Logs ─────────────────────────────────────────────────────────────
 
@@ -90,6 +90,58 @@ export async function getExertionEventsForDate(userId: string, date: string): Pr
 export async function deleteExertionEvent(id: string): Promise<void> {
   const { error } = await supabase.from('exertion_events').delete().eq('id', id);
   if (error) throw error;
+}
+
+export async function getRecentExertionEvents(userId: string, days: number): Promise<ExertionEvent[]> {
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+
+  const { data, error } = await supabase
+    .from('exertion_events')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('occurred_at', since.toISOString())
+    .order('occurred_at', { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []) as ExertionEvent[];
+}
+
+// ─── Crashes ────────────────────────────────────────────────────────────────────
+
+export async function saveCrash(crash: Omit<Crash, 'id'>): Promise<Crash> {
+  const { data, error } = await supabase
+    .from('crashes')
+    .insert(crash)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as Crash;
+}
+
+export async function updateCrash(id: string, updates: Partial<Crash>): Promise<Crash> {
+  const { data, error } = await supabase
+    .from('crashes')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as Crash;
+}
+
+export async function getCrashes(userId: string, limit: number): Promise<Crash[]> {
+  const { data, error } = await supabase
+    .from('crashes')
+    .select('*')
+    .eq('user_id', userId)
+    .order('start_date', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data ?? []) as Crash[];
 }
 
 // ─── Daily Envelope ─────────────────────────────────────────────────────────────

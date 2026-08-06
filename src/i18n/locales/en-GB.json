@@ -122,5 +122,32 @@
     "todays_exertion": "Today's exertion",
     "no_exertion_logged": "Nothing logged yet today.",
     "remove": "Remove"
+  },
+  "crashes": {
+    "active_title": "Crash in progress",
+    "active_since": "Since",
+    "end_crash": "End crash",
+    "start_crash": "Log a crash",
+    "severity": "Severity",
+    "severity_mild": "Mild",
+    "severity_moderate": "Moderate",
+    "severity_severe": "Severe",
+    "symptoms": "Symptoms",
+    "symptom_fatigue": "Fatigue",
+    "symptom_pem": "Post-exertional malaise",
+    "symptom_cognitive_dysfunction": "Cognitive dysfunction",
+    "symptom_pain": "Pain",
+    "symptom_orthostatic_intolerance": "Orthostatic intolerance",
+    "symptom_sensory_sensitivity": "Sensory sensitivity",
+    "likely_trigger": "What likely triggered this? (optional)",
+    "no_trigger": "Not sure / no recent exertion",
+    "notes_optional": "Notes (optional)",
+    "save": "Save",
+    "history": "Crash history",
+    "no_crashes_logged": "No crashes logged yet.",
+    "ongoing": "Ongoing",
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
+    "delay_hours": "{{count}}h after exertion"
   }
 }
