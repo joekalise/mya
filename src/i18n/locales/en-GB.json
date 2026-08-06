@@ -65,5 +65,42 @@
   },
   "placeholder_screen": {
     "coming_soon": "Coming soon"
+  },
+  "common": {
+    "retry": "Retry",
+    "loading": "Loading..."
+  },
+  "tracker": {
+    "bell_score_today": "Functional level today",
+    "bell_score_hint": "Bell CFS Disability Scale — 100 is normal function, 0 is bedridden",
+    "fatigue_score": "Fatigue",
+    "fatigue_score_hint": "0 = none, 10 = as bad as it gets",
+    "cognitive_dysfunction_score": "Cognitive dysfunction",
+    "cognitive_dysfunction_score_hint": "Brain fog, word-finding, processing speed",
+    "pain_score": "Pain",
+    "pain_score_hint": "0 = none, 10 = as bad as it gets",
+    "woke_rested": "Woke rested",
+    "woke_rested_hint": "Did you feel refreshed when you woke up?",
+    "pem_today": "Crash today (PEM)",
+    "pem_today_hint": "Are you experiencing post-exertional malaise right now?",
+    "other_symptoms_today": "Other symptoms today",
+    "dizzy_on_standing": "Dizzy on standing",
+    "palpitations": "Palpitations",
+    "unsteady_on_feet": "Unsteady on feet",
+    "cold_limbs": "Cold limbs",
+    "temperature_dysregulation": "Hot or cold for no reason",
+    "flu_like_symptoms": "Flu-like symptoms",
+    "sensory_chemical_reaction": "Sensitive to smells/foods/chemicals",
+    "medications_taken": "Medication taken",
+    "medications_yes": "Yes",
+    "medications_partial": "Partial",
+    "medications_no": "No",
+    "notes": "Notes",
+    "notes_placeholder": "Anything else worth noting today...",
+    "save": "Save",
+    "already_logged_title": "Logged today",
+    "already_logged_subtitle": "You can edit today's entry any time.",
+    "edit_today": "Edit today's entry",
+    "saved_success": "Saved"
   }
 }
