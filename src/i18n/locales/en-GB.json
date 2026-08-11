@@ -83,6 +83,7 @@
     "woke_rested_hint": "Did you feel refreshed when you woke up?",
     "pem_today": "Crash today (PEM)",
     "pem_today_hint": "Are you experiencing post-exertional malaise right now?",
+    "pem_today_signpost": "This just flags the day. For severity, symptoms, or linking a likely trigger, log it in the Crashes tab.",
     "other_symptoms_today": "Other symptoms today",
     "dizzy_on_standing": "Dizzy on standing",
     "palpitations": "Palpitations",

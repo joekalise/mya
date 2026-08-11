@@ -178,3 +178,4 @@ dashboard.streak
 dashboard.active_crash_title
 dashboard.view_crashes
 dashboard.no_data_yet
+tracker.pem_today_signpost

@@ -215,6 +215,7 @@ export default function PaceScreen() {
                 />
               </View>
               <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('tracker.pem_today_hint')}</Text>
+              <Text style={styles.pemSignpost}>{t('tracker.pem_today_signpost')}</Text>
             </View>
 
             <View style={[styles.section, isDark && styles.sectionDark]}>
@@ -380,6 +381,7 @@ const styles = StyleSheet.create({
 
   pemSection: { borderColor: Colors.error + '50' },
   pemLabel: { marginBottom: 0 },
+  pemSignpost: { fontSize: FontSize.xs, color: Colors.error, fontWeight: '600', marginTop: 2 },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
 
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
