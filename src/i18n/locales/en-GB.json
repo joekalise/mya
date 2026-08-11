@@ -153,7 +153,14 @@
     "streak": "day streak",
     "active_crash_title": "Crash in progress",
     "view_crashes": "View",
-    "no_data_yet": "Nothing logged yet. Start with today's check-in."
+    "no_data_yet": "Nothing logged yet. Start with today's check-in.",
+    "health_title": "Health",
+    "health_connect": "Connect Apple Health",
+    "health_connect_hint": "Syncs steps, sleep, heart rate, and HRV automatically, so exertion shows up in your data even on days you don't log it.",
+    "health_steps": "Steps",
+    "health_sleep": "Sleep",
+    "health_hrv": "HRV",
+    "health_resting_hr": "Resting HR"
   },
   "crashes": {
     "active_title": "Crash in progress",

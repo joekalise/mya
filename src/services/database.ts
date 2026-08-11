@@ -1,5 +1,5 @@
 import { supabase } from '@/services/supabase';
-import { DailyLog, ExertionEvent, DailyEnvelope, Crash, DsqSfScore } from '@/types';
+import { DailyLog, ExertionEvent, DailyEnvelope, Crash, DsqSfScore, HealthData } from '@/types';
 
 // ─── Daily Logs ─────────────────────────────────────────────────────────────
 
@@ -194,6 +194,63 @@ export async function getLatestDsqSfScore(userId: string): Promise<DsqSfScore | 
 
   if (error) throw error;
   return data as DsqSfScore | null;
+}
+
+// ─── Health Data ────────────────────────────────────────────────────────────────
+
+export async function saveHealthData(data: Omit<HealthData, 'id'>): Promise<HealthData> {
+  try {
+    const { data: result, error } = await supabase
+      .from('health_data')
+      .upsert(data, { onConflict: 'user_id,date' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return result as HealthData;
+  } catch (err) {
+    console.error('saveHealthData error:', err);
+    throw err;
+  }
+}
+
+export async function getTodayHealthData(userId: string, date: string): Promise<HealthData | null> {
+  try {
+    const { data, error } = await supabase
+      .from('health_data')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('date', date)
+      .single();
+
+    if (error && error.code === 'PGRST116') return null;
+    if (error) throw error;
+    return data as HealthData;
+  } catch (err) {
+    console.error('getTodayHealthData error:', err);
+    return null;
+  }
+}
+
+export async function getHealthDataRange(userId: string, days: number): Promise<HealthData[]> {
+  try {
+    const since = new Date();
+    since.setDate(since.getDate() - (days - 1));
+    const sinceDate = since.toISOString().split('T')[0];
+
+    const { data, error } = await supabase
+      .from('health_data')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('date', sinceDate)
+      .order('date', { ascending: true });
+
+    if (error) throw error;
+    return (data ?? []) as HealthData[];
+  } catch (err) {
+    console.error('getHealthDataRange error:', err);
+    return [];
+  }
 }
 
 // ─── Streak ───────────────────────────────────────────────────────────────────

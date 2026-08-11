@@ -190,3 +190,10 @@ onboarding.tour.crashes_title
 onboarding.tour.crashes_body
 onboarding.tour.insights_title
 onboarding.tour.insights_body
+dashboard.health_title
+dashboard.health_connect
+dashboard.health_connect_hint
+dashboard.health_steps
+dashboard.health_sleep
+dashboard.health_hrv
+dashboard.health_resting_hr

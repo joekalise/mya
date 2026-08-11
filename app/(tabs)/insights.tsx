@@ -17,6 +17,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/contexts/ProfileContext';
 import { getDailyLogs, getRecentExertionEvents, getCrashes, getLatestDsqSfScore } from '@/services/database';
 import { generateWeeklyInsight, WeeklyInsight } from '@/services/aiInsights';
+import { useHealthHistory } from '@/hooks/useHealthHistory';
+import { useRecoveryData } from '@/hooks/useRecoveryData';
 import { DsqSfScore } from '@/types';
 
 export default function InsightsScreen() {
@@ -25,6 +27,8 @@ export default function InsightsScreen() {
   const isDark = useColorScheme() === 'dark';
   const { user } = useAuth();
   const { profile } = useProfile();
+  const { history: healthHistory } = useHealthHistory(28);
+  const { data: recoveryData } = useRecoveryData();
 
   const [logCount, setLogCount] = useState(0);
   const [latestDsq, setLatestDsq] = useState<DsqSfScore | null>(null);
@@ -60,7 +64,7 @@ export default function InsightsScreen() {
         getRecentExertionEvents(user.id, 28),
         getCrashes(user.id, 20),
       ]);
-      const result = await generateWeeklyInsight({ logs, exertionEvents, crashes, profile });
+      const result = await generateWeeklyInsight({ logs, exertionEvents, crashes, profile, healthHistory, recoveryData });
       setInsight(result);
     } catch (err) {
       Alert.alert(err instanceof Error ? err.message : 'Failed to generate insight');

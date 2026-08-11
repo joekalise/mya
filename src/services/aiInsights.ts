@@ -1,5 +1,5 @@
 import { supabase } from '@/services/supabase';
-import { DailyLog, ExertionEvent, Crash, UserProfile } from '@/types';
+import { DailyLog, ExertionEvent, Crash, UserProfile, HealthData, RecoverySnapshot } from '@/types';
 
 export interface WeeklyInsight {
   summary: string;
@@ -31,7 +31,67 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function buildDataSummary(logs: DailyLog[], exertionEvents: ExertionEvent[], crashes: Crash[]): string {
+function buildHealthSummary(healthHistory: HealthData[], recoveryData?: RecoverySnapshot | null): string {
+  const withHRV = healthHistory.filter((d) => d.hrv !== null);
+  const withSleep = healthHistory.filter((d) => d.sleep_duration !== null);
+  const withHR = healthHistory.filter((d) => d.resting_heart_rate !== null);
+  const withSteps = healthHistory.filter((d) => d.steps !== null);
+
+  if (withHRV.length === 0 && withSleep.length === 0 && withHR.length === 0 && withSteps.length === 0) {
+    return '';
+  }
+
+  const lines: string[] = [`\n\nHEALTH DATA (last ${healthHistory.length} days with data, from Apple Health):`];
+
+  if (withHRV.length > 0) {
+    const avgHRV = (withHRV.reduce((s, d) => s + d.hrv!, 0) / withHRV.length).toFixed(1);
+    const recent = withHRV.slice(-3);
+    const earlier = withHRV.slice(0, -3);
+    let trend = '';
+    if (recent.length >= 2 && earlier.length >= 2) {
+      const rHRV = recent.reduce((s, d) => s + d.hrv!, 0) / recent.length;
+      const eHRV = earlier.reduce((s, d) => s + d.hrv!, 0) / earlier.length;
+      const pct = ((eHRV - rHRV) / eHRV) * 100;
+      if (pct >= 10) trend = ` (down ${pct.toFixed(0)}% vs earlier — reduced HRV is linked to fatigue severity and autonomic stress in ME/CFS research)`;
+      else if (pct <= -10) trend = ' (up — recovering)';
+    }
+    lines.push(`- Average HRV: ${avgHRV}ms${trend}`);
+  }
+
+  if (withSteps.length > 0) {
+    const avgSteps = Math.round(withSteps.reduce((s, d) => s + d.steps!, 0) / withSteps.length);
+    lines.push(`- Average daily steps: ${avgSteps.toLocaleString()} (useful as an objective exertion signal even on days with no manually logged exertion event)`);
+  }
+
+  if (withSleep.length > 0) {
+    const avgSleep = (withSleep.reduce((s, d) => s + d.sleep_duration!, 0) / withSleep.length).toFixed(1);
+    lines.push(`- Average sleep: ${avgSleep}h`);
+  }
+
+  if (withHR.length > 0) {
+    const avgHR = Math.round(withHR.reduce((s, d) => s + d.resting_heart_rate!, 0) / withHR.length);
+    lines.push(`- Average resting heart rate: ${avgHR}bpm`);
+  }
+
+  if (recoveryData) {
+    if (recoveryData.oxygen_saturation !== null) {
+      lines.push(`- Overnight SpO2 (today): ${recoveryData.oxygen_saturation}%${recoveryData.oxygen_saturation < 94 ? ' (below normal range)' : ''}`);
+    }
+    if (recoveryData.respiratory_rate !== null) {
+      lines.push(`- Sleep respiratory rate (today): ${recoveryData.respiratory_rate} breaths/min${recoveryData.respiratory_rate > 18 ? ' (elevated, may indicate autonomic arousal)' : ''}`);
+    }
+  }
+
+  return lines.join('\n');
+}
+
+function buildDataSummary(
+  logs: DailyLog[],
+  exertionEvents: ExertionEvent[],
+  crashes: Crash[],
+  healthHistory: HealthData[],
+  recoveryData?: RecoverySnapshot | null
+): string {
   if (logs.length === 0) {
     return 'No tracking data available for this period.';
   }
@@ -66,6 +126,8 @@ function buildDataSummary(logs: DailyLog[], exertionEvents: ExertionEvent[], cra
         .map((c) => `  - ${formatDate(c.start_date)} to ${c.end_date ? formatDate(c.end_date) : 'ongoing'} (${c.severity}${c.pem_delay_hours !== null ? `, ${c.pem_delay_hours}h after exertion` : ''}, symptoms: ${c.symptoms.join(', ') || 'none noted'})`)
         .join('\n');
 
+  const healthSection = buildHealthSummary(healthHistory, recoveryData);
+
   return `
 TRACKING DATA SUMMARY (last 28 days, ${logs.length} days logged):
 - Average functional level (Bell scale): ${avgBellScore ?? 'not recorded'}/100
@@ -80,7 +142,7 @@ CRASHES:
 ${crashSummary}
 
 USER NOTES (free text from check-ins):
-${notes || '  None'}
+${notes || '  None'}${healthSection}
 `.trim();
 }
 
@@ -103,8 +165,10 @@ export async function generateWeeklyInsight(params: {
   exertionEvents: ExertionEvent[];
   crashes: Crash[];
   profile: UserProfile;
+  healthHistory?: HealthData[];
+  recoveryData?: RecoverySnapshot | null;
 }): Promise<WeeklyInsight> {
-  const { logs, exertionEvents, crashes, profile } = params;
+  const { logs, exertionEvents, crashes, profile, healthHistory = [], recoveryData } = params;
 
   const systemPrompt = `You are Mya, a data analyst for someone living with ME/CFS. Your job is to find the strongest correlations between exertion, post-exertional malaise (PEM) crashes, and daily function — not to reassure, but to produce something the user could show a doctor who doubts them.
 
@@ -120,17 +184,18 @@ Respond with a JSON object in exactly this structure:
 
 RULES:
 1. Prioritize PEM correlations: does exertion (by type/intensity) precede crashes by a consistent delay? Use the format "on days when X, Y averaged..." wherever possible.
-2. Every insight must include a real number — averages, day counts, hours of delay. Never write vague statements without a number attached.
-3. Be honest and direct, not reassuring. If a pattern is concerning, say so plainly.
-4. Never diagnose, never say "you are at risk", never recommend specific medications.
-5. Use language like "your data shows" and "in your case" — this is evidence, not advice.
-6. 3 points always. Valid JSON only, no markdown, no text outside the JSON.`;
+2. Where Apple Health data is present, treat steps as an objective exertion signal even on days with no manually logged exertion event, and HRV trend as an autonomic/overexertion signal — both are research-backed for ME/CFS, not just self-report.
+3. Every insight must include a real number — averages, day counts, hours of delay. Never write vague statements without a number attached.
+4. Be honest and direct, not reassuring. If a pattern is concerning, say so plainly.
+5. Never diagnose, never say "you are at risk", never recommend specific medications.
+6. Use language like "your data shows" and "in your case" — this is evidence, not advice.
+7. 3 points always. Valid JSON only, no markdown, no text outside the JSON.`;
 
   const userMessage = `Here is my health data:
 
 ${buildProfileSummary(profile)}
 
-${buildDataSummary(logs, exertionEvents, crashes)}`;
+${buildDataSummary(logs, exertionEvents, crashes, healthHistory, recoveryData)}`;
 
   try {
     const text = await callClaude({
