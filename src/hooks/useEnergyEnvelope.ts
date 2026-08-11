@@ -9,33 +9,30 @@ import {
 } from '@/services/database';
 import { ExertionEvent, ExertionType } from '@/types';
 
-const DEFAULT_BUDGET = 100;
-
 function todayDateString(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
-// Exertion cost heuristic: intensity (1-5) scaled by duration in 10-minute
-// units, so a 30-minute moderate (3) exertion costs 9 points against the
-// day's budget. Not a clinical formula, just a consistent relative scale.
-function pointsForEvent(intensity: number, durationMinutes: number | null): number {
-  return Math.round(intensity * ((durationMinutes ?? 10) / 10));
-}
-
+// Jason's Energy Envelope method: available and spent energy are each a
+// single 0-100 self-rating per day, not derived from logging every activity.
+// Discrete exertion events are kept as an optional, occasional add (mainly
+// useful for linking a likely trigger from the Crashes screen), not a
+// requirement for the envelope itself.
 export function useEnergyEnvelope(): {
+  available: number | null;
+  spent: number | null;
   events: ExertionEvent[];
-  budget: number;
-  spent: number;
   isLoading: boolean;
+  saveEnvelope: (available: number, spent: number) => Promise<void>;
   addEvent: (type: ExertionType, intensity: number, durationMinutes: number | null, notes: string) => Promise<void>;
   removeEvent: (id: string) => Promise<void>;
-  setBudget: (n: number) => Promise<void>;
   refresh: () => Promise<void>;
 } {
   const { user } = useAuth();
+  const [available, setAvailable] = useState<number | null>(null);
+  const [spent, setSpent] = useState<number | null>(null);
   const [events, setEvents] = useState<ExertionEvent[]>([]);
-  const [budget, setBudgetState] = useState(DEFAULT_BUDGET);
   const [isLoading, setIsLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -46,12 +43,13 @@ export function useEnergyEnvelope(): {
     setIsLoading(true);
     try {
       const today = todayDateString();
-      const [todayEvents, envelope] = await Promise.all([
-        getExertionEventsForDate(user.id, today),
+      const [envelope, todayEvents] = await Promise.all([
         getDailyEnvelope(user.id, today),
+        getExertionEventsForDate(user.id, today),
       ]);
+      setAvailable(envelope?.budget_points ?? null);
+      setSpent(envelope?.spent_points ?? null);
       setEvents(todayEvents);
-      setBudgetState(envelope?.budget_points ?? DEFAULT_BUDGET);
     } catch (err) {
       console.error('useEnergyEnvelope load error:', err);
     } finally {
@@ -63,19 +61,17 @@ export function useEnergyEnvelope(): {
     load();
   }, [load]);
 
-  const persistSpent = useCallback(
-    async (currentEvents: ExertionEvent[], currentBudget: number) => {
-      if (!user) return;
-      const spentPoints = currentEvents.reduce(
-        (sum, e) => sum + pointsForEvent(e.intensity, e.duration_minutes),
-        0
-      );
+  const saveEnvelope = useCallback(
+    async (nextAvailable: number, nextSpent: number) => {
+      if (!user) throw new Error('No authenticated user');
       await saveDailyEnvelope({
         user_id: user.id,
         date: todayDateString(),
-        budget_points: currentBudget,
-        spent_points: spentPoints,
+        budget_points: nextAvailable,
+        spent_points: nextSpent,
       });
+      setAvailable(nextAvailable);
+      setSpent(nextSpent);
     },
     [user]
   );
@@ -91,32 +87,15 @@ export function useEnergyEnvelope(): {
         duration_minutes: durationMinutes,
         notes,
       });
-      const nextEvents = [saved, ...events];
-      setEvents(nextEvents);
-      await persistSpent(nextEvents, budget);
+      setEvents((prev) => [saved, ...prev]);
     },
-    [user, events, budget, persistSpent]
+    [user]
   );
 
-  const removeEvent = useCallback(
-    async (id: string) => {
-      await deleteExertionEvent(id);
-      const nextEvents = events.filter((e) => e.id !== id);
-      setEvents(nextEvents);
-      await persistSpent(nextEvents, budget);
-    },
-    [events, budget, persistSpent]
-  );
+  const removeEvent = useCallback(async (id: string) => {
+    await deleteExertionEvent(id);
+    setEvents((prev) => prev.filter((e) => e.id !== id));
+  }, []);
 
-  const setBudget = useCallback(
-    async (n: number) => {
-      setBudgetState(n);
-      await persistSpent(events, n);
-    },
-    [events, persistSpent]
-  );
-
-  const spent = events.reduce((sum, e) => sum + pointsForEvent(e.intensity, e.duration_minutes), 0);
-
-  return { events, budget, spent, isLoading, addEvent, removeEvent, setBudget, refresh: load };
+  return { available, spent, events, isLoading, saveEnvelope, addEvent, removeEvent, refresh: load };
 }

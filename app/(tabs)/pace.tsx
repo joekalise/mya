@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
 import {
   View,
@@ -9,58 +9,128 @@ import {
   TouchableOpacity,
   useColorScheme,
   Alert,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { DragSlider } from '@/components/common/DragSlider';
 import { Button } from '@/components/common/Button';
+import { ErrorMessage } from '@/components/common/ErrorMessage';
 import { Colors } from '@/constants/colors';
 import { FontSize, Spacing, BorderRadius, FontFamily } from '@/constants/theme';
+import { useDailyLog } from '@/hooks/useDailyLog';
 import { useEnergyEnvelope } from '@/hooks/useEnergyEnvelope';
-import { ExertionType, ExertionEvent } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { MedsTaken, ExertionType } from '@/types';
+
+function todayDateLabel(): string {
+  return new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+}
 
 const EXERTION_TYPES: ExertionType[] = ['physical', 'cognitive', 'emotional', 'social'];
 const DURATION_PRESETS = [15, 30, 45, 60, 90];
 
-function timeLabel(iso: string): string {
-  return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-}
-
 export default function PaceScreen() {
   const { t } = useTranslation();
   const isDark = useColorScheme() === 'dark';
-  const { events, budget, spent, isLoading, addEvent, removeEvent, setBudget, refresh } = useEnergyEnvelope();
+  const { user } = useAuth();
+  const { todayLog, todayLogged, streak, isLoading: logLoading, error, saveLog, refresh: refreshLog } = useDailyLog();
+  const {
+    available, spent, events, isLoading: envelopeLoading,
+    saveEnvelope, addEvent, removeEvent, refresh: refreshEnvelope,
+  } = useEnergyEnvelope();
 
-  useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
+  useFocusEffect(useCallback(() => { refreshLog(); refreshEnvelope(); }, [refreshLog, refreshEnvelope]));
 
-  const [type, setType] = useState<ExertionType>('physical');
-  const [intensity, setIntensity] = useState(3);
-  const [duration, setDuration] = useState<number | null>(30);
+  const [editing, setEditing] = useState(false);
+  const [energyAvailable, setEnergyAvailable] = useState(70);
+  const [energySpent, setEnergySpent] = useState(0);
+  const [bellScore, setBellScore] = useState(70);
+  const [fatigueScore, setFatigueScore] = useState(0);
+  const [cognitiveScore, setCognitiveScore] = useState(0);
+  const [wokeRested, setWokeRested] = useState<boolean | null>(null);
+  const [pemToday, setPemToday] = useState(false);
+  const [medsTaken, setMedsTaken] = useState<MedsTaken>('yes');
   const [notes, setNotes] = useState('');
-  const [isAdding, setIsAdding] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [showExertionForm, setShowExertionForm] = useState(false);
+  const [exertionType, setExertionType] = useState<ExertionType>('physical');
+  const [exertionIntensity, setExertionIntensity] = useState(3);
+  const [exertionDuration, setExertionDuration] = useState<number | null>(30);
+  const [exertionNotes, setExertionNotes] = useState('');
+  const [isAddingExertion, setIsAddingExertion] = useState(false);
 
-  const handleAdd = async () => {
-    setIsAdding(true);
+  useEffect(() => {
+    if (todayLog) {
+      setBellScore(todayLog.bell_score_today ?? 70);
+      setFatigueScore(todayLog.fatigue_score);
+      setCognitiveScore(todayLog.cognitive_dysfunction_score ?? 0);
+      setWokeRested(todayLog.woke_rested ?? null);
+      setPemToday(todayLog.pem_today);
+      setMedsTaken(todayLog.medications_taken ?? 'yes');
+      setNotes(todayLog.notes ?? '');
+    }
+    setEditing(false);
+    setSaved(false);
+  }, [todayLog]);
+
+  useEffect(() => {
+    setEnergyAvailable(available ?? 70);
+    setEnergySpent(spent ?? 0);
+  }, [available, spent]);
+
+  const alreadyLoggedToday = todayLogged && available !== null;
+
+  const handleSave = async () => {
+    if (!user) return;
+    setIsSaving(true);
+    setSaved(false);
     try {
-      await addEvent(type, intensity, duration, notes);
-      setNotes('');
+      await Promise.all([
+        saveLog({
+          bell_score_today: bellScore,
+          fatigue_score: fatigueScore,
+          cognitive_dysfunction_score: cognitiveScore,
+          pain_score: null,
+          woke_rested: wokeRested,
+          pem_today: pemToday,
+          dizzy_on_standing: null,
+          palpitations: null,
+          unsteady_on_feet: null,
+          cold_limbs: null,
+          temperature_dysregulation: null,
+          flu_like_symptoms: null,
+          sensory_chemical_reaction: null,
+          medications_taken: medsTaken,
+          notes,
+        }),
+        saveEnvelope(energyAvailable, energySpent),
+      ]);
+      setEditing(false);
+      setSaved(true);
+    } catch {
+      Alert.alert('Failed to save');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAddExertion = async () => {
+    setIsAddingExertion(true);
+    try {
+      await addEvent(exertionType, exertionIntensity, exertionDuration, exertionNotes);
+      setExertionNotes('');
+      setShowExertionForm(false);
     } catch {
       Alert.alert('Failed to save exertion');
     } finally {
-      setIsAdding(false);
+      setIsAddingExertion(false);
     }
   };
 
-  const handleRemove = async (event: ExertionEvent) => {
-    if (!event.id) return;
-    try {
-      await removeEvent(event.id);
-    } catch {
-      Alert.alert('Failed to remove');
-    }
-  };
-
-  const overBudget = spent > budget;
-  const fillPct = budget > 0 ? Math.min(100, (spent / budget) * 100) : 0;
+  const showForm = !alreadyLoggedToday || editing;
+  const isLoading = logLoading || envelopeLoading;
 
   if (isLoading) {
     return <SafeAreaView style={[styles.screen, isDark && styles.screenDark]} />;
@@ -72,146 +142,204 @@ export default function PaceScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
       >
-        <Text style={[styles.headerTitle, isDark && styles.textPrimaryDark]}>{t('pace.title')}</Text>
+        <Text style={[styles.headerDate, isDark && styles.textPrimaryDark]}>{todayDateLabel()}</Text>
 
-        <View style={[styles.envelopeCard, isDark && styles.envelopeCardDark]}>
-          <View style={styles.envelopeRow}>
-            <View style={styles.envelopeStat}>
-              <Text style={[styles.envelopeLabel, isDark && styles.textSecDark]}>{t('pace.available')}</Text>
-              <View style={styles.budgetStepperRow}>
-                <TouchableOpacity
-                  onPress={() => setBudget(Math.max(0, budget - 10))}
-                  style={[styles.stepperBtn, isDark && styles.stepperBtnDark]}
-                >
-                  <Text style={[styles.stepperText, isDark && styles.textPrimaryDark]}>−</Text>
-                </TouchableOpacity>
-                <Text style={[styles.envelopeValue, isDark && styles.textPrimaryDark]}>{budget}</Text>
-                <TouchableOpacity
-                  onPress={() => setBudget(budget + 10)}
-                  style={[styles.stepperBtn, isDark && styles.stepperBtnDark]}
-                >
-                  <Text style={[styles.stepperText, isDark && styles.textPrimaryDark]}>+</Text>
-                </TouchableOpacity>
+        {error && <ErrorMessage message={error} />}
+
+        {alreadyLoggedToday && !editing && (
+          <View style={[styles.loggedCard, isDark && styles.loggedCardDark]}>
+            <View style={styles.loggedCardHeader}>
+              <Text style={styles.loggedTick}>✓</Text>
+              <View style={styles.loggedCardTextGroup}>
+                <Text style={[styles.loggedTitle, isDark && styles.textPrimaryDark]}>{t('tracker.already_logged_title')}</Text>
+                <Text style={[styles.loggedSubtitle, isDark && styles.textSecDark]}>{t('tracker.already_logged_subtitle')}</Text>
+              </View>
+              {streak > 0 && (
+                <View style={styles.streakBadge}>
+                  <Text style={styles.streakBadgeText}>🔥 {streak}</Text>
+                </View>
+              )}
+            </View>
+            <Button label={t('tracker.edit_today')} onPress={() => setEditing(true)} variant="outline" />
+          </View>
+        )}
+
+        {saved && !editing && (
+          <View style={[styles.successCard, isDark && styles.successCardDark]}>
+            <Text style={styles.successText}>{t('tracker.saved_success')}</Text>
+          </View>
+        )}
+
+        {showForm && (
+          <>
+            <View style={[styles.section, isDark && styles.sectionDark]}>
+              <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('pace.energy_envelope')}</Text>
+              <Text style={[styles.fieldLabel, isDark && styles.textSecDark]}>{t('pace.available')}</Text>
+              <DragSlider value={energyAvailable} onChange={setEnergyAvailable} isDark={isDark} min={0} max={100} step={10} invertColor />
+              <Text style={[styles.fieldLabel, isDark && styles.textSecDark]}>{t('pace.spent')}</Text>
+              <DragSlider value={energySpent} onChange={setEnergySpent} isDark={isDark} min={0} max={100} step={10} />
+              {energySpent > energyAvailable && (
+                <Text style={styles.overBudgetText}>⚠ {t('pace.over_budget')}</Text>
+              )}
+              <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('pace.energy_hint')}</Text>
+            </View>
+
+            <View style={[styles.section, isDark && styles.sectionDark]}>
+              <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('tracker.bell_score_today')}</Text>
+              <DragSlider value={bellScore} onChange={setBellScore} isDark={isDark} min={0} max={100} step={10} invertColor />
+              <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('tracker.bell_score_hint')}</Text>
+            </View>
+
+            <View style={[styles.section, isDark && styles.sectionDark]}>
+              <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('tracker.fatigue_score')}</Text>
+              <DragSlider value={fatigueScore} onChange={setFatigueScore} isDark={isDark} />
+              <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('tracker.fatigue_score_hint')}</Text>
+            </View>
+
+            <View style={[styles.section, isDark && styles.sectionDark]}>
+              <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('tracker.cognitive_dysfunction_score')}</Text>
+              <DragSlider value={cognitiveScore} onChange={setCognitiveScore} isDark={isDark} />
+              <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('tracker.cognitive_dysfunction_score_hint')}</Text>
+            </View>
+
+            <View style={[styles.section, isDark && styles.sectionDark, styles.pemSection]}>
+              <View style={styles.rowBetween}>
+                <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark, styles.pemLabel]}>{t('tracker.pem_today')}</Text>
+                <Switch
+                  value={pemToday}
+                  onValueChange={setPemToday}
+                  trackColor={{ true: Colors.error, false: isDark ? Colors.borderDark : Colors.border }}
+                  thumbColor="#FFFFFF"
+                />
+              </View>
+              <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('tracker.pem_today_hint')}</Text>
+            </View>
+
+            <View style={[styles.section, isDark && styles.sectionDark]}>
+              <View style={styles.rowBetween}>
+                <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark, { marginBottom: 0 }]}>{t('tracker.woke_rested')}</Text>
+                <Switch
+                  value={wokeRested === true}
+                  onValueChange={(v) => setWokeRested(v)}
+                  trackColor={{ true: Colors.primary, false: isDark ? Colors.borderDark : Colors.border }}
+                  thumbColor="#FFFFFF"
+                />
+              </View>
+              <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('tracker.woke_rested_hint')}</Text>
+            </View>
+
+            <View style={[styles.section, isDark && styles.sectionDark]}>
+              <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('tracker.medications_taken')}</Text>
+              <View style={styles.medsRow}>
+                {(['yes', 'partial', 'no'] as MedsTaken[]).map((opt) => {
+                  const selected = medsTaken === opt;
+                  return (
+                    <TouchableOpacity
+                      key={opt}
+                      onPress={() => setMedsTaken(opt)}
+                      style={[styles.medsButton, isDark && styles.medsButtonDark, selected && { borderColor: Colors.primary, backgroundColor: Colors.primaryLight }]}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.optionLabel, isDark && styles.textSecDark, selected && { color: Colors.primaryDark, fontWeight: '700', fontFamily: FontFamily.bold }]}>
+                        {t(`tracker.medications_${opt}`)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
-            <View style={styles.envelopeStat}>
-              <Text style={[styles.envelopeLabel, isDark && styles.textSecDark]}>{t('pace.spent')}</Text>
-              <Text style={[styles.envelopeValue, { color: overBudget ? Colors.error : Colors.success }]}>
-                {spent}
-              </Text>
+
+            <View style={[styles.section, isDark && styles.sectionDark]}>
+              <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('tracker.notes')}</Text>
+              <TextInput
+                style={[styles.notesInput, isDark && styles.notesInputDark]}
+                placeholder={t('tracker.notes_placeholder')}
+                placeholderTextColor={isDark ? Colors.textSecondaryDark : Colors.textSecondary}
+                value={notes}
+                onChangeText={(v) => setNotes(v.slice(0, 500))}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
             </View>
-          </View>
 
-          <View style={[styles.progressTrack, isDark && styles.progressTrackDark]}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: `${fillPct}%`, backgroundColor: overBudget ? Colors.error : Colors.success },
-              ]}
-            />
-          </View>
+            <Button label={t('tracker.save')} onPress={handleSave} isLoading={isSaving} style={styles.saveButton} />
+          </>
+        )}
 
-          {overBudget ? (
-            <Text style={styles.overBudgetText}>⚠ {t('pace.over_budget')}</Text>
-          ) : (
-            <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('pace.budget_hint')}</Text>
+        <View style={[styles.section, isDark && styles.sectionDark]}>
+          <TouchableOpacity onPress={() => setShowExertionForm((v) => !v)} activeOpacity={0.7}>
+            <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>
+              {showExertionForm ? '− ' : '+ '}{t('pace.log_exertion_optional')}
+            </Text>
+          </TouchableOpacity>
+          <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('pace.log_exertion_hint')}</Text>
+
+          {showExertionForm && (
+            <>
+              <Text style={[styles.fieldLabel, isDark && styles.textSecDark]}>{t('pace.exertion_type')}</Text>
+              <View style={styles.chipRow}>
+                {EXERTION_TYPES.map((v) => {
+                  const selected = exertionType === v;
+                  return (
+                    <TouchableOpacity key={v} onPress={() => setExertionType(v)} style={[styles.chip, isDark && styles.chipDark, selected && styles.chipSelected]}>
+                      <Text style={[styles.chipText, isDark && !selected && styles.chipTextDark, selected && styles.chipTextSelected]}>{t(`pace.type_${v}`)}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={[styles.fieldLabel, isDark && styles.textSecDark]}>{t('pace.intensity')}</Text>
+              <View style={styles.chipRow}>
+                {[1, 2, 3, 4, 5].map((v) => {
+                  const selected = exertionIntensity === v;
+                  return (
+                    <TouchableOpacity key={v} onPress={() => setExertionIntensity(v)} style={[styles.intensityBtn, isDark && styles.chipDark, selected && styles.chipSelected]}>
+                      <Text style={[styles.chipText, isDark && !selected && styles.chipTextDark, selected && styles.chipTextSelected]}>{v}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={[styles.fieldLabel, isDark && styles.textSecDark]}>{t('pace.duration_minutes')}</Text>
+              <View style={styles.chipRow}>
+                {DURATION_PRESETS.map((m) => {
+                  const selected = exertionDuration === m;
+                  return (
+                    <TouchableOpacity key={m} onPress={() => setExertionDuration(selected ? null : m)} style={[styles.chip, isDark && styles.chipDark, selected && styles.chipSelected]}>
+                      <Text style={[styles.chipText, isDark && !selected && styles.chipTextDark, selected && styles.chipTextSelected]}>{m}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <TextInput
+                style={[styles.notesInput, isDark && styles.notesInputDark]}
+                placeholder={t('pace.notes_optional')}
+                placeholderTextColor={isDark ? Colors.textSecondaryDark : Colors.textSecondary}
+                value={exertionNotes}
+                onChangeText={setExertionNotes}
+              />
+              <Button label={t('pace.add')} onPress={handleAddExertion} isLoading={isAddingExertion} />
+            </>
           )}
-        </View>
 
-        <View style={[styles.section, isDark && styles.sectionDark]}>
-          <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('pace.log_exertion')}</Text>
-
-          <Text style={[styles.fieldLabel, isDark && styles.textSecDark]}>{t('pace.exertion_type')}</Text>
-          <View style={styles.chipRow}>
-            {EXERTION_TYPES.map((v) => {
-              const selected = type === v;
-              return (
-                <TouchableOpacity
-                  key={v}
-                  onPress={() => setType(v)}
-                  style={[styles.chip, isDark && styles.chipDark, selected && styles.chipSelected]}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.chipText, isDark && !selected && styles.chipTextDark, selected && styles.chipTextSelected]}>
-                    {t(`pace.type_${v}`)}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <Text style={[styles.fieldLabel, isDark && styles.textSecDark]}>{t('pace.intensity')}</Text>
-          <View style={styles.chipRow}>
-            {[1, 2, 3, 4, 5].map((v) => {
-              const selected = intensity === v;
-              return (
-                <TouchableOpacity
-                  key={v}
-                  onPress={() => setIntensity(v)}
-                  style={[styles.intensityBtn, isDark && styles.chipDark, selected && styles.chipSelected]}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.chipText, isDark && !selected && styles.chipTextDark, selected && styles.chipTextSelected]}>
-                    {v}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <Text style={[styles.fieldLabel, isDark && styles.textSecDark]}>{t('pace.duration_minutes')}</Text>
-          <View style={styles.chipRow}>
-            {DURATION_PRESETS.map((m) => {
-              const selected = duration === m;
-              return (
-                <TouchableOpacity
-                  key={m}
-                  onPress={() => setDuration(selected ? null : m)}
-                  style={[styles.chip, isDark && styles.chipDark, selected && styles.chipSelected]}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.chipText, isDark && !selected && styles.chipTextDark, selected && styles.chipTextSelected]}>
-                    {m}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <TextInput
-            style={[styles.notesInput, isDark && styles.notesInputDark]}
-            placeholder={t('pace.notes_optional')}
-            placeholderTextColor={isDark ? Colors.textSecondaryDark : Colors.textSecondary}
-            value={notes}
-            onChangeText={setNotes}
-          />
-
-          <Button label={t('pace.add')} onPress={handleAdd} isLoading={isAdding} />
-        </View>
-
-        <View style={[styles.section, isDark && styles.sectionDark]}>
-          <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('pace.todays_exertion')}</Text>
-          {events.length === 0 ? (
-            <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('pace.no_exertion_logged')}</Text>
-          ) : (
-            events.map((event) => (
-              <View key={event.id} style={[styles.eventRow, isDark && styles.eventRowDark]}>
-                <View style={styles.eventInfo}>
+          {events.length > 0 && (
+            <View style={styles.eventList}>
+              {events.map((event) => (
+                <View key={event.id} style={[styles.eventRow, isDark && styles.eventRowDark]}>
                   <Text style={[styles.eventTitle, isDark && styles.textPrimaryDark]}>
                     {t(`pace.type_${event.exertion_type}`)} · {t('pace.intensity')} {event.intensity}
                     {event.duration_minutes ? ` · ${event.duration_minutes}min` : ''}
                   </Text>
-                  <Text style={[styles.eventTime, isDark && styles.textSecDark]}>{timeLabel(event.occurred_at)}</Text>
-                  {event.notes ? (
-                    <Text style={[styles.eventNotes, isDark && styles.textSecDark]}>{event.notes}</Text>
-                  ) : null}
+                  <TouchableOpacity onPress={() => event.id && removeEvent(event.id)}>
+                    <Text style={styles.removeText}>{t('pace.remove')}</Text>
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity onPress={() => handleRemove(event)}>
-                  <Text style={styles.removeText}>{t('pace.remove')}</Text>
-                </TouchableOpacity>
-              </View>
-            ))
+              ))}
+            </View>
           )}
         </View>
 
@@ -225,80 +353,58 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
   screenDark: { backgroundColor: Colors.backgroundDark },
   scrollContent: { padding: Spacing.lg, gap: Spacing.md },
-  headerTitle: { fontSize: FontSize.xl, fontWeight: '800', fontFamily: FontFamily.extraBold, color: Colors.textPrimary },
+  headerDate: { fontSize: FontSize.xl, fontWeight: '800', fontFamily: FontFamily.extraBold, color: Colors.textPrimary },
   textPrimaryDark: { color: Colors.textPrimaryDark },
   textSecDark: { color: Colors.textSecondaryDark },
 
-  envelopeCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: Spacing.md,
-    gap: Spacing.sm,
-  },
-  envelopeCardDark: { backgroundColor: Colors.surfaceDark, borderColor: Colors.borderDark },
-  envelopeRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  envelopeStat: { alignItems: 'center', gap: Spacing.xs },
-  envelopeLabel: { fontSize: FontSize.xs, color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.4 },
-  envelopeValue: { fontSize: 32, fontWeight: '800', fontFamily: FontFamily.extraBold, color: Colors.textPrimary },
-  budgetStepperRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  stepperBtn: {
-    width: 28, height: 28, borderRadius: 14,
-    borderWidth: 1, borderColor: Colors.border,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  stepperBtnDark: { borderColor: Colors.borderDark },
-  stepperText: { fontSize: FontSize.lg, color: Colors.textPrimary, fontWeight: '700' },
-  progressTrack: { height: 8, borderRadius: 4, backgroundColor: Colors.border, overflow: 'hidden' },
-  progressTrackDark: { backgroundColor: Colors.borderDark },
-  progressFill: { height: '100%', borderRadius: 4 },
-  overBudgetText: { fontSize: FontSize.sm, color: Colors.error, fontWeight: '600' },
-  hint: { fontSize: FontSize.xs, color: Colors.textSecondary },
+  loggedCard: { backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, padding: Spacing.md, borderWidth: 1, borderColor: Colors.border, gap: Spacing.md },
+  loggedCardDark: { backgroundColor: Colors.surfaceDark, borderColor: Colors.borderDark },
+  loggedCardHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  loggedTick: { fontSize: FontSize.xl, color: Colors.success, fontWeight: '700', fontFamily: FontFamily.bold },
+  loggedCardTextGroup: { flex: 1 },
+  loggedTitle: { fontSize: FontSize.md, fontWeight: '700', fontFamily: FontFamily.bold, color: Colors.textPrimary },
+  loggedSubtitle: { fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: 2 },
+  streakBadge: { backgroundColor: Colors.primary, borderRadius: BorderRadius.full, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs },
+  streakBadgeText: { color: '#FFF', fontSize: FontSize.sm, fontWeight: '700' },
 
-  section: {
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: Spacing.md,
-    gap: Spacing.sm,
-  },
+  successCard: { backgroundColor: Colors.success + '18', borderRadius: BorderRadius.md, padding: Spacing.md, alignItems: 'center' },
+  successCardDark: { backgroundColor: Colors.success + '22' },
+  successText: { color: Colors.success, fontWeight: '700', fontFamily: FontFamily.bold },
+
+  section: { backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, gap: Spacing.sm },
   sectionDark: { backgroundColor: Colors.surfaceDark, borderColor: Colors.borderDark },
   sectionLabel: { fontSize: FontSize.md, fontWeight: '700', fontFamily: FontFamily.bold, color: Colors.textPrimary },
   fieldLabel: { fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: Spacing.xs },
+  hint: { fontSize: FontSize.xs, color: Colors.textSecondary },
+  overBudgetText: { fontSize: FontSize.sm, color: Colors.error, fontWeight: '600' },
+
+  pemSection: { borderColor: Colors.error + '50' },
+  pemLabel: { marginBottom: 0 },
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
 
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  chip: {
-    borderWidth: 1.5, borderColor: Colors.border, borderRadius: BorderRadius.full,
-    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
-  },
-  intensityBtn: {
-    width: 44, height: 44, borderRadius: 22,
-    borderWidth: 1.5, borderColor: Colors.border,
-    alignItems: 'center', justifyContent: 'center',
-  },
+  chip: { borderWidth: 1.5, borderColor: Colors.border, borderRadius: BorderRadius.full, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
+  intensityBtn: { width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center' },
   chipDark: { borderColor: Colors.borderDark },
   chipSelected: { backgroundColor: Colors.primaryLight, borderColor: Colors.primary },
   chipText: { fontSize: FontSize.sm, color: Colors.textPrimary },
   chipTextDark: { color: Colors.textPrimaryDark },
   chipTextSelected: { color: Colors.primaryDark, fontWeight: '700', fontFamily: FontFamily.bold },
 
-  notesInput: {
-    borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.md,
-    padding: Spacing.md, fontSize: FontSize.md, fontFamily: FontFamily.regular, color: Colors.textPrimary,
-  },
+  medsRow: { flexDirection: 'row', gap: Spacing.sm },
+  medsButton: { flex: 1, borderWidth: 1.5, borderColor: Colors.border, borderRadius: BorderRadius.md, paddingVertical: Spacing.sm, alignItems: 'center' },
+  medsButtonDark: { borderColor: Colors.borderDark },
+  optionLabel: { fontSize: FontSize.sm, color: Colors.textPrimary },
+
+  notesInput: { borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.md, padding: Spacing.md, fontSize: FontSize.md, fontFamily: FontFamily.regular, color: Colors.textPrimary },
   notesInputDark: { borderColor: Colors.borderDark, color: Colors.textPrimaryDark, backgroundColor: Colors.surfaceDark },
 
-  eventRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
-    paddingVertical: Spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.border,
-  },
+  saveButton: { marginTop: Spacing.sm },
+
+  eventList: { gap: Spacing.xs, marginTop: Spacing.sm },
+  eventRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: Spacing.xs, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.border },
   eventRowDark: { borderTopColor: Colors.borderDark },
-  eventInfo: { flex: 1, gap: 2 },
-  eventTitle: { fontSize: FontSize.sm, fontWeight: '600', fontFamily: FontFamily.semiBold, color: Colors.textPrimary },
-  eventTime: { fontSize: FontSize.xs, color: Colors.textSecondary },
-  eventNotes: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 2 },
+  eventTitle: { fontSize: FontSize.sm, color: Colors.textPrimary },
   removeText: { fontSize: FontSize.xs, color: Colors.error, fontWeight: '600' },
 
   bottomPad: { height: Spacing.xxl },
