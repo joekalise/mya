@@ -7,9 +7,11 @@ import {
   useColorScheme,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 
 import { StepHeader } from '@/components/onboarding/StepHeader';
 import { OptionCard } from '@/components/onboarding/OptionCard';
@@ -17,11 +19,18 @@ import { MultiSelectCard } from '@/components/onboarding/MultiSelectCard';
 import { Button } from '@/components/common/Button';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { Colors } from '@/constants/colors';
-import { Spacing } from '@/constants/theme';
+import { Spacing, FontSize, FontFamily, BorderRadius } from '@/constants/theme';
 import { useProfile } from '@/contexts/ProfileContext';
 import { PrimarySymptom, PemOnsetDelay } from '@/types';
 
 const TOTAL_STEPS = 3;
+
+const TOUR_SLIDES = [
+  { icon: 'today-outline' as const, titleKey: 'onboarding.tour.today_title', bodyKey: 'onboarding.tour.today_body' },
+  { icon: 'battery-charging-outline' as const, titleKey: 'onboarding.tour.pace_title', bodyKey: 'onboarding.tour.pace_body' },
+  { icon: 'flash-outline' as const, titleKey: 'onboarding.tour.crashes_title', bodyKey: 'onboarding.tour.crashes_body' },
+  { icon: 'stats-chart-outline' as const, titleKey: 'onboarding.tour.insights_title', bodyKey: 'onboarding.tour.insights_body' },
+];
 
 const PRIMARY_SYMPTOMS: PrimarySymptom[] = [
   'fatigue',
@@ -54,6 +63,8 @@ export default function OnboardingScreen() {
   const [bellScore, setBellScore] = useState<number | null>(null);
   const [pemOnsetDelay, setPemOnsetDelay] = useState<PemOnsetDelay | null>(null);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [showTour, setShowTour] = useState(false);
+  const [tourStep, setTourStep] = useState(0);
 
   const canProceed = useCallback((): boolean => {
     switch (currentStep) {
@@ -89,6 +100,14 @@ export default function OnboardingScreen() {
     if (currentStep < TOTAL_STEPS) {
       setCurrentStep((s) => s + 1);
     } else {
+      setShowTour(true);
+    }
+  };
+
+  const handleTourNext = () => {
+    if (tourStep < TOUR_SLIDES.length - 1) {
+      setTourStep((s) => s + 1);
+    } else {
       handleComplete();
     }
   };
@@ -102,6 +121,39 @@ export default function OnboardingScreen() {
       <SafeAreaView style={[styles.screen, isDark && styles.screenDark]}>
         <View style={styles.completingContainer}>
           <LoadingSpinner size="large" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (showTour) {
+    const slide = TOUR_SLIDES[tourStep];
+    const isLastTourSlide = tourStep === TOUR_SLIDES.length - 1;
+    return (
+      <SafeAreaView style={[styles.screen, isDark && styles.screenDark]}>
+        <View style={styles.tourContainer}>
+          <TouchableOpacity onPress={handleComplete} style={styles.tourSkip}>
+            <Text style={styles.tourSkipText}>{t('onboarding.tour.skip')}</Text>
+          </TouchableOpacity>
+
+          <View style={styles.tourContent}>
+            <View style={styles.tourIconCircle}>
+              <Ionicons name={slide.icon} size={40} color={Colors.primary} />
+            </View>
+            <Text style={[styles.tourTitle, isDark && styles.titleDark]}>{t(slide.titleKey)}</Text>
+            <Text style={[styles.tourBody, isDark && styles.tourBodyDark]}>{t(slide.bodyKey)}</Text>
+          </View>
+
+          <View style={styles.tourDots}>
+            {TOUR_SLIDES.map((_, i) => (
+              <View key={i} style={[styles.tourDot, i === tourStep && styles.tourDotActive]} />
+            ))}
+          </View>
+
+          <Button
+            label={isLastTourSlide ? t('onboarding.tour.get_started') : t('onboarding.tour.next')}
+            onPress={handleTourNext}
+          />
         </View>
       </SafeAreaView>
     );
@@ -231,4 +283,22 @@ const styles = StyleSheet.create({
   nextButton: { flex: 1 },
   backPlaceholder: { minWidth: 100 },
   completingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
+  tourContainer: { flex: 1, padding: Spacing.lg, justifyContent: 'space-between' },
+  tourSkip: { alignSelf: 'flex-end' },
+  tourSkipText: { fontSize: FontSize.sm, color: Colors.textSecondary, fontWeight: '600' },
+  tourContent: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md, paddingHorizontal: Spacing.lg },
+  tourIconCircle: {
+    width: 88, height: 88, borderRadius: 44,
+    backgroundColor: Colors.primaryLight,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: Spacing.sm,
+  },
+  tourTitle: { fontSize: FontSize.xxl, fontWeight: '800', fontFamily: FontFamily.extraBold, color: Colors.textPrimary },
+  titleDark: { color: Colors.textPrimaryDark },
+  tourBody: { fontSize: FontSize.md, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
+  tourBodyDark: { color: Colors.textSecondaryDark },
+  tourDots: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.xs, marginBottom: Spacing.lg },
+  tourDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.border },
+  tourDotActive: { backgroundColor: Colors.primary, width: 20 },
 });

@@ -179,3 +179,14 @@ dashboard.active_crash_title
 dashboard.view_crashes
 dashboard.no_data_yet
 tracker.pem_today_signpost
+onboarding.tour.skip
+onboarding.tour.next
+onboarding.tour.get_started
+onboarding.tour.today_title
+onboarding.tour.today_body
+onboarding.tour.pace_title
+onboarding.tour.pace_body
+onboarding.tour.crashes_title
+onboarding.tour.crashes_body
+onboarding.tour.insights_title
+onboarding.tour.insights_body

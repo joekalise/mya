@@ -54,6 +54,19 @@
       "10": "10 — Severe symptoms at rest, bedridden most of the time, no travel outside the house",
       "0": "0 — Severe symptoms continuously, bedridden constantly, unable to care for self"
     },
+    "tour": {
+      "skip": "Skip",
+      "next": "Next",
+      "get_started": "Get started",
+      "today_title": "Today",
+      "today_body": "Your dashboard. See today's stats, your streak, and your energy at a glance.",
+      "pace_title": "Pace",
+      "pace_body": "Your daily check-in: how you're feeling, plus your energy envelope — available energy vs. spent, the core of pacing.",
+      "crashes_title": "Crashes",
+      "crashes_body": "When PEM hits. Log severity and symptoms, and link it back to what likely caused it — PEM often shows up 24 to 72 hours after exertion, not right away.",
+      "insights_title": "Insights",
+      "insights_body": "The evidence. AI-generated patterns, the DSQ-SF assessment, and reports you can bring to a doctor."
+    },
     "pem_onset_delay": {
       "title": "When do symptoms usually hit after exertion?",
       "subtitle": "PEM often doesn't show up right away. Knowing your pattern helps Mya link crashes back to what actually caused them.",
