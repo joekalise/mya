@@ -292,7 +292,7 @@ export default function ProfileScreen() {
   const isDark = useColorScheme() === 'dark';
   const { user, signOut } = useAuth();
   const { profile, saveProfile } = useProfile();
-  const { isAvailable: healthAvailable, isConnected: healthConnected, todayData: healthData, connect: connectHealth, disconnect: disconnectHealth } = useHealthData();
+  const { isAvailable: healthAvailable, isConnected: healthConnected, connect: connectHealth, disconnect: disconnectHealth } = useHealthData();
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
@@ -439,34 +439,6 @@ export default function ProfileScreen() {
                 : <Switch value={healthConnected} onValueChange={handleToggleHealth} trackColor={{ true: Colors.primary }} />
             )}
           </View>
-          {healthConnected && (
-            <View style={styles.healthGrid}>
-              {healthData?.steps !== null && healthData?.steps !== undefined && (
-                <View style={styles.healthStat}>
-                  <Text style={[styles.healthValue, isDark && styles.textPrimaryDark]}>{healthData.steps.toLocaleString()}</Text>
-                  <Text style={[styles.healthLabel, isDark && styles.textSecDark]}>{t('dashboard.health_steps')}</Text>
-                </View>
-              )}
-              {healthData?.sleep_duration !== null && healthData?.sleep_duration !== undefined && (
-                <View style={styles.healthStat}>
-                  <Text style={[styles.healthValue, isDark && styles.textPrimaryDark]}>{healthData.sleep_duration}h</Text>
-                  <Text style={[styles.healthLabel, isDark && styles.textSecDark]}>{t('dashboard.health_sleep')}</Text>
-                </View>
-              )}
-              {healthData?.hrv !== null && healthData?.hrv !== undefined && (
-                <View style={styles.healthStat}>
-                  <Text style={[styles.healthValue, isDark && styles.textPrimaryDark]}>{healthData.hrv}ms</Text>
-                  <Text style={[styles.healthLabel, isDark && styles.textSecDark]}>{t('dashboard.health_hrv')}</Text>
-                </View>
-              )}
-              {healthData?.resting_heart_rate !== null && healthData?.resting_heart_rate !== undefined && (
-                <View style={styles.healthStat}>
-                  <Text style={[styles.healthValue, isDark && styles.textPrimaryDark]}>{healthData.resting_heart_rate}bpm</Text>
-                  <Text style={[styles.healthLabel, isDark && styles.textSecDark]}>{t('dashboard.health_resting_hr')}</Text>
-                </View>
-              )}
-            </View>
-          )}
         </View>
 
         <View style={[styles.section, isDark && styles.sectionDark]}>
@@ -537,10 +509,6 @@ const styles = StyleSheet.create({
   rowTextGroup: { flex: 1 },
   timeRow: { marginTop: Spacing.xs },
 
-  healthGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md, marginTop: Spacing.xs },
-  healthStat: { minWidth: '40%', gap: 2 },
-  healthValue: { fontSize: FontSize.lg, fontWeight: '800', fontFamily: FontFamily.extraBold, color: Colors.textPrimary },
-  healthLabel: { fontSize: FontSize.xs, color: Colors.textSecondary },
 
   deleteButton: { borderColor: Colors.error },
 

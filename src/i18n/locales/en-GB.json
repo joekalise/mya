@@ -224,14 +224,17 @@
     "fatigue": "Fatigue",
     "cognitive": "Cognitive dysfunction",
     "energy": "Energy",
-    "streak": "day streak",
     "active_crash_title": "Crash in progress",
     "view_crashes": "View",
     "no_data_yet": "Nothing logged yet. Start with today's check-in.",
     "health_steps": "Steps",
     "health_sleep": "Sleep",
     "health_hrv": "HRV",
-    "health_resting_hr": "Resting HR"
+    "health_resting_hr": "Resting HR",
+    "todays_log": "Today's log",
+    "edit": "Edit",
+    "meds": "Meds",
+    "health_title": "Health"
   },
   "crashes": {
     "active_title": "Crash in progress",

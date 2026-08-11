@@ -9,7 +9,26 @@ import { FontSize, Spacing, BorderRadius, FontFamily } from '@/constants/theme';
 import { useDailyLog } from '@/hooks/useDailyLog';
 import { useEnergyEnvelope } from '@/hooks/useEnergyEnvelope';
 import { useCrashes } from '@/hooks/useCrashes';
+import { useHealthData } from '@/hooks/useHealthData';
 import { ProfileButton } from '@/components/common/ProfileButton';
+
+function stepsColor(steps: number): string {
+  if (steps < 3000 || steps > 12000) return Colors.error;
+  if (steps < 6000) return Colors.warning;
+  return Colors.success;
+}
+
+function sleepColor(hours: number): string {
+  if (hours < 5.5 || hours > 9) return Colors.error;
+  if (hours < 7) return Colors.warning;
+  return Colors.success;
+}
+
+function hrvColor(hrv: number): string {
+  if (hrv < 25) return Colors.error;
+  if (hrv < 40) return Colors.warning;
+  return Colors.success;
+}
 
 function todayDateLabel(): string {
   return new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -25,15 +44,17 @@ export default function TodayScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const isDark = useColorScheme() === 'dark';
-  const { todayLog, todayLogged, streak, isLoading: logLoading, refresh: refreshLog } = useDailyLog();
+  const { todayLog, todayLogged, isLoading: logLoading, refresh: refreshLog } = useDailyLog();
   const { available, spent, isLoading: envelopeLoading, refresh: refreshEnvelope } = useEnergyEnvelope();
   const { activeCrash, isLoading: crashLoading, refresh: refreshCrashes } = useCrashes();
+  const { isConnected: healthConnected, todayData: healthData, recheck: recheckHealth } = useHealthData();
 
   useFocusEffect(useCallback(() => {
     refreshLog();
     refreshEnvelope();
     refreshCrashes();
-  }, [refreshLog, refreshEnvelope, refreshCrashes]));
+    recheckHealth();
+  }, [refreshLog, refreshEnvelope, refreshCrashes, recheckHealth]));
 
   const isLoading = logLoading || envelopeLoading || crashLoading;
 
@@ -76,26 +97,91 @@ export default function TodayScreen() {
           </View>
         ) : (
           <>
-            <View style={[styles.statGrid]}>
-              <View style={[styles.statCard, isDark && styles.statCardDark]}>
-                <Text style={[styles.statValue, isDark && styles.textPrimaryDark]}>{todayLog?.bell_score_today ?? '—'}</Text>
-                <Text style={[styles.statLabel, isDark && styles.textSecDark]}>{t('dashboard.bell_score')}</Text>
+            <View style={[styles.todaySummaryCard, isDark && styles.todaySummaryCardDark]}>
+              <View style={styles.todaySummaryHeader}>
+                <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('dashboard.todays_log')}</Text>
+                <TouchableOpacity onPress={() => router.push('/(tabs)/pace')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={styles.todaySummaryEdit}>{t('dashboard.edit')}</Text>
+                </TouchableOpacity>
               </View>
-              <View style={[styles.statCard, isDark && styles.statCardDark]}>
-                <Text style={[styles.statValue, isDark && styles.textPrimaryDark]}>{todayLog?.fatigue_score ?? '—'}/10</Text>
-                <Text style={[styles.statLabel, isDark && styles.textSecDark]}>{t('dashboard.fatigue')}</Text>
-              </View>
-              <View style={[styles.statCard, isDark && styles.statCardDark]}>
-                <Text style={[styles.statValue, isDark && styles.textPrimaryDark]}>{todayLog?.cognitive_dysfunction_score ?? '—'}/10</Text>
-                <Text style={[styles.statLabel, isDark && styles.textSecDark]}>{t('dashboard.cognitive')}</Text>
-              </View>
-              {streak > 0 && (
-                <View style={[styles.statCard, isDark && styles.statCardDark]}>
-                  <Text style={[styles.statValue, { color: Colors.primary }]}>🔥 {streak}</Text>
-                  <Text style={[styles.statLabel, isDark && styles.textSecDark]}>{t('dashboard.streak')}</Text>
+              <View style={styles.todaySummaryRow}>
+                <View style={styles.todaySummaryItem}>
+                  <Text style={[styles.todaySummaryValue, isDark && styles.textPrimaryDark]}>{todayLog?.bell_score_today ?? '—'}</Text>
+                  <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.bell_score')}</Text>
                 </View>
-              )}
+                <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
+                <View style={styles.todaySummaryItem}>
+                  <Text style={[styles.todaySummaryValue, isDark && styles.textPrimaryDark]}>{todayLog?.fatigue_score ?? '—'}</Text>
+                  <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.fatigue')}</Text>
+                </View>
+                <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
+                <View style={styles.todaySummaryItem}>
+                  <Text style={[styles.todaySummaryValue, isDark && styles.textPrimaryDark]}>{todayLog?.cognitive_dysfunction_score ?? '—'}</Text>
+                  <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.cognitive')}</Text>
+                </View>
+                {todayLog?.medications_taken && (
+                  <>
+                    <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
+                    <View style={styles.todaySummaryItem}>
+                      <Text style={[
+                        styles.todaySummaryValue,
+                        { color: todayLog.medications_taken === 'yes' ? Colors.success : todayLog.medications_taken === 'partial' ? Colors.warning : Colors.error },
+                      ]}>
+                        {todayLog.medications_taken === 'yes' ? '✓' : todayLog.medications_taken === 'partial' ? '~' : '✗'}
+                      </Text>
+                      <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.meds')}</Text>
+                    </View>
+                  </>
+                )}
+              </View>
             </View>
+
+            {healthConnected && healthData && (
+              <View style={[styles.healthCard, isDark && styles.healthCardDark]}>
+                <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('dashboard.health_title')}</Text>
+                <View style={styles.todaySummaryRow}>
+                  {healthData.steps !== null && (
+                    <>
+                      <View style={styles.todaySummaryItem}>
+                        <Text style={[styles.healthStatValue, { color: stepsColor(healthData.steps) }]}>{(healthData.steps / 1000).toFixed(1)}k</Text>
+                        <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_steps')}</Text>
+                      </View>
+                      {(healthData.sleep_duration !== null || healthData.hrv !== null) && (
+                        <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
+                      )}
+                    </>
+                  )}
+                  {healthData.sleep_duration !== null && (
+                    <>
+                      <View style={styles.todaySummaryItem}>
+                        <Text style={[styles.healthStatValue, { color: sleepColor(healthData.sleep_duration) }]}>{healthData.sleep_duration}h</Text>
+                        <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_sleep')}</Text>
+                      </View>
+                      {healthData.hrv !== null && (
+                        <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
+                      )}
+                    </>
+                  )}
+                  {healthData.hrv !== null && (
+                    <View style={styles.todaySummaryItem}>
+                      <Text style={[styles.healthStatValue, { color: hrvColor(healthData.hrv) }]}>{healthData.hrv}</Text>
+                      <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_hrv')}</Text>
+                    </View>
+                  )}
+                </View>
+                {healthData.resting_heart_rate !== null && (
+                  <>
+                    <View style={[styles.healthRowDivider, isDark && styles.healthRowDividerDark]} />
+                    <View style={styles.todaySummaryRow}>
+                      <View style={styles.todaySummaryItem}>
+                        <Text style={[styles.healthStatValue, isDark && styles.textPrimaryDark]}>{healthData.resting_heart_rate}bpm</Text>
+                        <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_resting_hr')}</Text>
+                      </View>
+                    </View>
+                  </>
+                )}
+              </View>
+            )}
 
             {available !== null && (
               <View style={[styles.section, isDark && styles.sectionDark]}>
@@ -148,14 +234,28 @@ const styles = StyleSheet.create({
   promptTitle: { fontSize: FontSize.lg, fontWeight: '800', fontFamily: FontFamily.extraBold, color: Colors.textPrimary, textAlign: 'center' },
   promptBody: { fontSize: FontSize.sm, color: Colors.textSecondary, textAlign: 'center', marginBottom: Spacing.sm },
 
-  statGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  statCard: {
-    flexGrow: 1, minWidth: '45%', backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: Colors.border,
-    padding: Spacing.md, alignItems: 'center', gap: 2,
+  todaySummaryCard: {
+    backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: Colors.border,
+    padding: Spacing.md, gap: Spacing.sm,
   },
-  statCardDark: { backgroundColor: Colors.surfaceDark, borderColor: Colors.borderDark },
-  statValue: { fontSize: FontSize.xxl, fontWeight: '800', fontFamily: FontFamily.extraBold, color: Colors.textPrimary },
-  statLabel: { fontSize: FontSize.xs, color: Colors.textSecondary },
+  todaySummaryCardDark: { backgroundColor: Colors.surfaceDark, borderColor: Colors.borderDark },
+  todaySummaryHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  todaySummaryEdit: { fontSize: FontSize.sm, fontWeight: '600', fontFamily: FontFamily.semiBold, color: Colors.primary },
+  todaySummaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' },
+  todaySummaryItem: { alignItems: 'center', flex: 1, gap: 4 },
+  todaySummaryValue: { fontSize: FontSize.xxl, fontWeight: '900', fontFamily: FontFamily.extraBold, lineHeight: 30, color: Colors.textPrimary },
+  todaySummaryItemLabel: { fontSize: FontSize.xs, color: Colors.textSecondary, fontWeight: '500', fontFamily: FontFamily.medium },
+  todaySummaryDivider: { width: 1, height: 40, backgroundColor: Colors.border },
+  todaySummaryDividerDark: { backgroundColor: Colors.borderDark },
+
+  healthCard: {
+    backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: Colors.border,
+    padding: Spacing.md, gap: Spacing.sm,
+  },
+  healthCardDark: { backgroundColor: Colors.surfaceDark, borderColor: Colors.borderDark },
+  healthRowDivider: { height: 1, backgroundColor: Colors.border, marginVertical: 4 },
+  healthRowDividerDark: { backgroundColor: Colors.borderDark },
+  healthStatValue: { fontSize: FontSize.xxl, fontWeight: '900', fontFamily: FontFamily.extraBold, lineHeight: 30, color: Colors.textPrimary },
 
   section: { backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, gap: Spacing.xs },
   sectionDark: { backgroundColor: Colors.surfaceDark, borderColor: Colors.borderDark },

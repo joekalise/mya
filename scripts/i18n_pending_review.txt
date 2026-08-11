@@ -304,3 +304,6 @@ insights.info_message
 update_banner.title
 update_banner.subtitle
 update_banner.update_btn
+dashboard.todays_log
+dashboard.edit
+dashboard.meds
