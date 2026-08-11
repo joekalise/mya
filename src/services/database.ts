@@ -253,6 +253,27 @@ export async function getHealthDataRange(userId: string, days: number): Promise<
   }
 }
 
+// ─── Account deletion ───────────────────────────────────────────────────────────
+
+export async function deleteAllUserData(userId: string): Promise<void> {
+  const tables = [
+    'daily_logs',
+    'exertion_events',
+    'daily_envelope',
+    'crashes',
+    'dsq_sf_scores',
+    'health_data',
+    'medications',
+    'nudges',
+    'profiles',
+  ] as const;
+
+  for (const table of tables) {
+    const { error } = await supabase.from(table).delete().eq('user_id', userId);
+    if (error) throw error;
+  }
+}
+
 // ─── Streak ───────────────────────────────────────────────────────────────────
 
 export async function getStreak(userId: string): Promise<number> {

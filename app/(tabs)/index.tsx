@@ -9,7 +9,6 @@ import { FontSize, Spacing, BorderRadius, FontFamily } from '@/constants/theme';
 import { useDailyLog } from '@/hooks/useDailyLog';
 import { useEnergyEnvelope } from '@/hooks/useEnergyEnvelope';
 import { useCrashes } from '@/hooks/useCrashes';
-import { useHealthData } from '@/hooks/useHealthData';
 
 function todayDateLabel(): string {
   return new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -28,7 +27,6 @@ export default function TodayScreen() {
   const { todayLog, todayLogged, streak, isLoading: logLoading, refresh: refreshLog } = useDailyLog();
   const { available, spent, isLoading: envelopeLoading, refresh: refreshEnvelope } = useEnergyEnvelope();
   const { activeCrash, isLoading: crashLoading, refresh: refreshCrashes } = useCrashes();
-  const { isAvailable: healthAvailable, isConnected: healthConnected, todayData: healthData, connect: connectHealth } = useHealthData();
 
   useFocusEffect(useCallback(() => {
     refreshLog();
@@ -113,45 +111,6 @@ export default function TodayScreen() {
           </>
         )}
 
-        {healthAvailable && (
-          <View style={[styles.section, isDark && styles.sectionDark]}>
-            <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('dashboard.health_title')}</Text>
-            {healthConnected ? (
-              <View style={styles.healthGrid}>
-                {healthData?.steps !== null && healthData?.steps !== undefined && (
-                  <View style={styles.healthStat}>
-                    <Text style={[styles.healthValue, isDark && styles.textPrimaryDark]}>{healthData.steps.toLocaleString()}</Text>
-                    <Text style={[styles.healthLabel, isDark && styles.textSecDark]}>{t('dashboard.health_steps')}</Text>
-                  </View>
-                )}
-                {healthData?.sleep_duration !== null && healthData?.sleep_duration !== undefined && (
-                  <View style={styles.healthStat}>
-                    <Text style={[styles.healthValue, isDark && styles.textPrimaryDark]}>{healthData.sleep_duration}h</Text>
-                    <Text style={[styles.healthLabel, isDark && styles.textSecDark]}>{t('dashboard.health_sleep')}</Text>
-                  </View>
-                )}
-                {healthData?.hrv !== null && healthData?.hrv !== undefined && (
-                  <View style={styles.healthStat}>
-                    <Text style={[styles.healthValue, isDark && styles.textPrimaryDark]}>{healthData.hrv}ms</Text>
-                    <Text style={[styles.healthLabel, isDark && styles.textSecDark]}>{t('dashboard.health_hrv')}</Text>
-                  </View>
-                )}
-                {healthData?.resting_heart_rate !== null && healthData?.resting_heart_rate !== undefined && (
-                  <View style={styles.healthStat}>
-                    <Text style={[styles.healthValue, isDark && styles.textPrimaryDark]}>{healthData.resting_heart_rate}bpm</Text>
-                    <Text style={[styles.healthLabel, isDark && styles.textSecDark]}>{t('dashboard.health_resting_hr')}</Text>
-                  </View>
-                )}
-              </View>
-            ) : (
-              <>
-                <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('dashboard.health_connect_hint')}</Text>
-                <Button label={t('dashboard.health_connect')} onPress={connectHealth} variant="outline" />
-              </>
-            )}
-          </View>
-        )}
-
         <View style={styles.bottomPad} />
       </ScrollView>
     </SafeAreaView>
@@ -202,11 +161,6 @@ const styles = StyleSheet.create({
   progressFill: { height: '100%', borderRadius: 4 },
 
   editLink: { fontSize: FontSize.sm, color: Colors.primary, fontWeight: '600', textAlign: 'center' },
-
-  healthGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md },
-  healthStat: { minWidth: '40%', gap: 2 },
-  healthValue: { fontSize: FontSize.lg, fontWeight: '800', fontFamily: FontFamily.extraBold, color: Colors.textPrimary },
-  healthLabel: { fontSize: FontSize.xs, color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.3 },
 
   bottomPad: { height: Spacing.xxl },
 });

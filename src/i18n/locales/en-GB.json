@@ -74,6 +74,77 @@
       "next_day": "The next day",
       "24_72h": "24 to 72 hours later",
       "variable": "It varies, no clear pattern"
+    },
+    "age_range": {
+      "under_25": "Under 25",
+      "25_35": "25–35",
+      "35_45": "35–45",
+      "45_55": "45–55",
+      "55_plus": "55+"
+    },
+    "biological_sex": {
+      "male": "Male",
+      "female": "Female",
+      "prefer_not_to_say": "Prefer not to say"
+    },
+    "diagnosis_criteria": {
+      "fukuda": "Fukuda (1994 CDC)",
+      "canadian_consensus_criteria": "Canadian Consensus Criteria",
+      "international_consensus_criteria": "International Consensus Criteria",
+      "iom_seid": "IOM / SEID (2015)",
+      "not_formally_diagnosed": "Not formally diagnosed",
+      "other": "Other"
+    },
+    "diagnosis_years": {
+      "not_diagnosed": "Not yet diagnosed",
+      "under_1": "Under 1 year",
+      "1_3": "1–3 years",
+      "3_5": "3–5 years",
+      "5_10": "5–10 years",
+      "10_plus": "10+ years"
+    },
+    "pem_duration_typical": {
+      "hours": "A few hours",
+      "one_day": "About a day",
+      "several_days": "Several days",
+      "week_plus": "A week or more",
+      "variable": "Varies a lot"
+    },
+    "mobility_status": {
+      "none": "No mobility aid needed",
+      "mobility_aid": "Use a mobility aid (cane, walker)",
+      "wheelchair_part_time": "Wheelchair, part time",
+      "wheelchair_full_time": "Wheelchair, full time",
+      "housebound": "Housebound",
+      "bedbound": "Bedbound"
+    },
+    "comorbidities": {
+      "pots": "POTS",
+      "fibromyalgia": "Fibromyalgia",
+      "mcas": "MCAS",
+      "eds": "EDS",
+      "ibs": "IBS",
+      "migraine": "Migraine",
+      "anxiety_depression": "Anxiety / depression",
+      "mold_illness": "Mould illness",
+      "other": "Other"
+    },
+    "medications": {
+      "low_dose_naltrexone": "Low-dose naltrexone",
+      "beta_blockers": "Beta blockers",
+      "antihistamines_h1_h2": "Antihistamines (H1/H2)",
+      "stimulants": "Stimulants",
+      "antidepressants": "Antidepressants",
+      "anticoagulants": "Anticoagulants",
+      "no_medication": "No medication",
+      "other": "Other"
+    },
+    "challenges": {
+      "sleep": "Sleep",
+      "exercise": "Exercise / movement",
+      "work": "Work",
+      "social_life": "Social life",
+      "mental_health": "Mental health"
     }
   },
   "placeholder_screen": {
@@ -81,7 +152,10 @@
   },
   "common": {
     "retry": "Retry",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "cancel": "Cancel",
+    "error": "Something went wrong",
+    "save_changes": "Save changes"
   },
   "tracker": {
     "bell_score_today": "Functional level today",
@@ -154,9 +228,6 @@
     "active_crash_title": "Crash in progress",
     "view_crashes": "View",
     "no_data_yet": "Nothing logged yet. Start with today's check-in.",
-    "health_title": "Health",
-    "health_connect": "Connect Apple Health",
-    "health_connect_hint": "Syncs steps, sleep, heart rate, and HRV automatically, so exertion shows up in your data even on days you don't log it.",
     "health_steps": "Steps",
     "health_sleep": "Sleep",
     "health_hrv": "HRV",
@@ -224,5 +295,52 @@
     "item_sensory_chemical_reaction": "Some smells, foods, medications, or chemicals make you feel sick",
     "save": "Save assessment",
     "attribution": "DePaul Symptom Questionnaire — Short Form, developed by Leonard A. Jason, PhD, DePaul University."
+  },
+  "notifications": {
+    "daily_checkin_title": "Time for today's check-in",
+    "daily_checkin_body": "A quick log of how today went, plus your energy numbers."
+  },
+  "profile": {
+    "section_your_profile": "Your profile",
+    "edit": "Edit",
+    "edit_title": "Edit profile",
+    "not_set": "Not set",
+    "field_age_range": "Age range",
+    "field_biological_sex": "Biological sex",
+    "field_diagnosis_criteria": "Diagnosis criteria",
+    "field_diagnosis_years": "Years since diagnosis",
+    "field_bell_baseline": "Baseline functional level (Bell scale)",
+    "field_pem_onset_delay": "Typical PEM onset delay",
+    "field_pem_duration": "Typical PEM duration",
+    "field_mobility_status": "Mobility status",
+    "field_primary_symptoms": "Primary symptoms",
+    "field_comorbidities": "Comorbidities",
+    "field_medications": "Medications",
+    "field_challenges": "Daily challenges",
+    "field_ai_context": "Anything else Mya should know",
+    "ai_context_placeholder": "e.g. exercise intolerance, specific triggers, what a good day looks like for you",
+    "section_about": "About you",
+    "section_diagnosis": "Diagnosis",
+    "section_pacing": "Pacing & PEM",
+    "section_symptoms": "Symptoms",
+    "section_lifestyle": "Medications & lifestyle",
+    "section_ai": "AI insights",
+    "section_reminders": "Daily reminder",
+    "reminder_hint": "A nudge to check in if you haven’t logged today.",
+    "reminder_time": "Reminder time: {{time}}",
+    "section_health": "Apple Health",
+    "health_hint": "Syncs steps, sleep, heart rate, and HRV automatically, so exertion shows up in your data even on days you don’t log it.",
+    "health_unavailable": "Apple Health isn’t available on this device.",
+    "section_account": "Account",
+    "sign_out": "Sign out",
+    "sign_out_confirm_title": "Sign out?",
+    "delete_account": "Delete account",
+    "deleting": "Deleting…",
+    "delete_account_confirm_title": "Delete your account?",
+    "delete_account_confirm_body": "This permanently deletes all your logs, crashes, and profile data. This can’t be undone.",
+    "notifications_denied_title": "Notifications disabled",
+    "notifications_denied_body": "Enable notifications in Settings to get a daily reminder.",
+    "error_save": "Could not save your profile. Please try again.",
+    "error_delete_account": "Could not delete your account. Please try again."
   }
 }

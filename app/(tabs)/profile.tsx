@@ -1,22 +1,557 @@
-import { View, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Switch,
+  TextInput,
+  Modal,
+  ActivityIndicator,
+  Alert,
+  useColorScheme,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import * as Notifications from 'expo-notifications';
 import { Button } from '@/components/common/Button';
+import { OptionCard } from '@/components/onboarding/OptionCard';
+import { MultiSelectCard } from '@/components/onboarding/MultiSelectCard';
+import { Colors } from '@/constants/colors';
+import { FontSize, Spacing, BorderRadius, FontFamily } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { Spacing } from '@/constants/theme';
+import { useProfile } from '@/contexts/ProfileContext';
+import { useHealthData } from '@/hooks/useHealthData';
+import { deleteAllUserData } from '@/services/database';
+import { requestNotificationPermissions, scheduleDailyCheckIn, cancelNotification } from '@/services/notifications';
+import {
+  AgeRange,
+  BiologicalSex,
+  DiagnosisCriteria,
+  DiagnosisYears,
+  PemOnsetDelay,
+  PemDurationTypical,
+  MobilityStatus,
+  PrimarySymptom,
+  Comorbidity,
+  Medication,
+  LifestyleChallenge,
+} from '@/types';
 
-export default function ProfileScreen() {
-  const { signOut } = useAuth();
+const AGE_RANGES: AgeRange[] = ['under_25', '25_35', '35_45', '45_55', '55_plus'];
+const BIOLOGICAL_SEXES: BiologicalSex[] = ['male', 'female', 'prefer_not_to_say'];
+const DIAGNOSIS_CRITERIA: DiagnosisCriteria[] = ['fukuda', 'canadian_consensus_criteria', 'international_consensus_criteria', 'iom_seid', 'not_formally_diagnosed', 'other'];
+const DIAGNOSIS_YEARS: DiagnosisYears[] = ['not_diagnosed', 'under_1', '1_3', '3_5', '5_10', '10_plus'];
+const BELL_SCORES = [100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0];
+const PEM_ONSET_DELAYS: PemOnsetDelay[] = ['same_day', 'next_day', '24_72h', 'variable'];
+const PEM_DURATIONS: PemDurationTypical[] = ['hours', 'one_day', 'several_days', 'week_plus', 'variable'];
+const MOBILITY_STATUSES: MobilityStatus[] = ['none', 'mobility_aid', 'wheelchair_part_time', 'wheelchair_full_time', 'housebound', 'bedbound'];
+const PRIMARY_SYMPTOMS: PrimarySymptom[] = ['fatigue', 'pem', 'unrefreshing_sleep', 'cognitive_dysfunction', 'orthostatic_intolerance', 'pain', 'sensory_sensitivity', 'temperature_dysregulation', 'immune_flulike', 'gi_issues'];
+const COMORBIDITIES: Comorbidity[] = ['pots', 'fibromyalgia', 'mcas', 'eds', 'ibs', 'migraine', 'anxiety_depression', 'mold_illness', 'other'];
+const MEDICATIONS: Medication[] = ['low_dose_naltrexone', 'beta_blockers', 'antihistamines_h1_h2', 'stimulants', 'antidepressants', 'anticoagulants', 'no_medication', 'other'];
+const CHALLENGES: LifestyleChallenge[] = ['sleep', 'exercise', 'work', 'social_life', 'mental_health'];
+
+function toggle<T>(arr: T[], val: T): T[] {
+  return arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val];
+}
+
+function timeToDate(timeString: string): Date {
+  const [h, m] = timeString.split(':').map((v) => parseInt(v, 10));
+  const d = new Date();
+  d.setHours(isNaN(h) ? 20 : h, isNaN(m) ? 0 : m, 0, 0);
+  return d;
+}
+
+function dateToTime(d: Date): string {
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+// ─── ProfileEditModal ───────────────────────────────────────────────────────────
+
+interface ProfileEditModalProps {
+  visible: boolean;
+  onClose: () => void;
+  isDark: boolean;
+  initial: {
+    age_range: AgeRange | null;
+    biological_sex: BiologicalSex | null;
+    diagnosis_criteria: DiagnosisCriteria | null;
+    diagnosis_years: DiagnosisYears | null;
+    bell_score_baseline: number | null;
+    pem_onset_delay: PemOnsetDelay | null;
+    pem_duration_typical: PemDurationTypical | null;
+    mobility_status: MobilityStatus | null;
+    primary_symptoms: PrimarySymptom[];
+    comorbidities: Comorbidity[];
+    medications: Medication[];
+    challenges: LifestyleChallenge[];
+    ai_context: string;
+  };
+  onSave: (updates: ProfileEditModalProps['initial']) => Promise<void>;
+}
+
+function EditSectionHeader({ label, color }: { label: string; color: string }) {
+  return (
+    <Text style={{ fontSize: FontSize.md, fontWeight: '700', fontFamily: FontFamily.bold, color, marginTop: Spacing.xl, marginBottom: Spacing.sm }}>
+      {label}
+    </Text>
+  );
+}
+
+function ProfileEditModal({ visible, onClose, isDark, initial, onSave }: ProfileEditModalProps) {
+  const { t } = useTranslation();
+  const { top: topInset } = useSafeAreaInsets();
+  const bg = isDark ? Colors.backgroundDark : Colors.background;
+  const cardBorder = isDark ? Colors.borderDark : Colors.border;
+  const textPrimary = isDark ? Colors.textPrimaryDark : Colors.textPrimary;
+  const textSecondary = isDark ? Colors.textSecondaryDark : Colors.textSecondary;
+
+  const [ageRange, setAgeRange] = useState<AgeRange | null>(null);
+  const [biologicalSex, setBiologicalSex] = useState<BiologicalSex | null>(null);
+  const [diagnosisCriteria, setDiagnosisCriteria] = useState<DiagnosisCriteria | null>(null);
+  const [diagnosisYears, setDiagnosisYears] = useState<DiagnosisYears | null>(null);
+  const [bellScore, setBellScore] = useState<number | null>(null);
+  const [pemOnsetDelay, setPemOnsetDelay] = useState<PemOnsetDelay | null>(null);
+  const [pemDuration, setPemDuration] = useState<PemDurationTypical | null>(null);
+  const [mobilityStatus, setMobilityStatus] = useState<MobilityStatus | null>(null);
+  const [primarySymptoms, setPrimarySymptoms] = useState<PrimarySymptom[]>([]);
+  const [comorbidities, setComorbidities] = useState<Comorbidity[]>([]);
+  const [medications, setMedications] = useState<Medication[]>([]);
+  const [challenges, setChallenges] = useState<LifestyleChallenge[]>([]);
+  const [aiContext, setAiContext] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (visible) {
+      setAgeRange(initial.age_range);
+      setBiologicalSex(initial.biological_sex);
+      setDiagnosisCriteria(initial.diagnosis_criteria);
+      setDiagnosisYears(initial.diagnosis_years);
+      setBellScore(initial.bell_score_baseline);
+      setPemOnsetDelay(initial.pem_onset_delay);
+      setPemDuration(initial.pem_duration_typical);
+      setMobilityStatus(initial.mobility_status);
+      setPrimarySymptoms(initial.primary_symptoms);
+      setComorbidities(initial.comorbidities);
+      setMedications(initial.medications);
+      setChallenges(initial.challenges);
+      setAiContext(initial.ai_context);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  async function handleSave() {
+    setIsSaving(true);
+    try {
+      await onSave({
+        age_range: ageRange,
+        biological_sex: biologicalSex,
+        diagnosis_criteria: diagnosisCriteria,
+        diagnosis_years: diagnosisYears,
+        bell_score_baseline: bellScore,
+        pem_onset_delay: pemOnsetDelay,
+        pem_duration_typical: pemDuration,
+        mobility_status: mobilityStatus,
+        primary_symptoms: primarySymptoms,
+        comorbidities,
+        medications,
+        challenges,
+        ai_context: aiContext,
+      });
+      onClose();
+    } catch (err) {
+      console.error('ProfileEditModal save error:', err);
+      Alert.alert(t('common.error'), t('profile.error_save'));
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  const compactCard = { paddingVertical: 8, marginBottom: 4 } as const;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Button label="Sign out" onPress={() => signOut()} variant="secondary" />
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: bg, paddingTop: topInset }}>
+        <View style={[styles.editModalHeader, { borderBottomColor: cardBorder }]}>
+          <Text style={[styles.editModalTitle, { color: textPrimary }]}>{t('profile.edit_title')}</Text>
+          <TouchableOpacity onPress={onClose} activeOpacity={0.8}>
+            <Text style={[styles.editModalClose, { color: textSecondary }]}>{t('common.cancel')}</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView contentContainerStyle={styles.editModalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <EditSectionHeader label={t('profile.section_about')} color={textSecondary} />
+
+          <Text style={[styles.editFieldLabel, { color: textSecondary }]}>{t('profile.field_age_range')}</Text>
+          {AGE_RANGES.map((v) => (
+            <OptionCard key={v} style={compactCard} label={t(`onboarding.age_range.${v}`)} isSelected={ageRange === v} onPress={() => setAgeRange(v)} />
+          ))}
+
+          <Text style={[styles.editFieldLabel, { color: textSecondary }]}>{t('profile.field_biological_sex')}</Text>
+          {BIOLOGICAL_SEXES.map((v) => (
+            <OptionCard key={v} style={compactCard} label={t(`onboarding.biological_sex.${v}`)} isSelected={biologicalSex === v} onPress={() => setBiologicalSex(v)} />
+          ))}
+
+          <EditSectionHeader label={t('profile.section_diagnosis')} color={textSecondary} />
+
+          <Text style={[styles.editFieldLabel, { color: textSecondary }]}>{t('profile.field_diagnosis_criteria')}</Text>
+          {DIAGNOSIS_CRITERIA.map((v) => (
+            <OptionCard key={v} style={compactCard} label={t(`onboarding.diagnosis_criteria.${v}`)} isSelected={diagnosisCriteria === v} onPress={() => setDiagnosisCriteria(v)} />
+          ))}
+
+          <Text style={[styles.editFieldLabel, { color: textSecondary }]}>{t('profile.field_diagnosis_years')}</Text>
+          {DIAGNOSIS_YEARS.map((v) => (
+            <OptionCard key={v} style={compactCard} label={t(`onboarding.diagnosis_years.${v}`)} isSelected={diagnosisYears === v} onPress={() => setDiagnosisYears(v)} />
+          ))}
+
+          <EditSectionHeader label={t('profile.section_pacing')} color={textSecondary} />
+
+          <Text style={[styles.editFieldLabel, { color: textSecondary }]}>{t('profile.field_bell_baseline')}</Text>
+          {BELL_SCORES.map((v) => (
+            <OptionCard key={v} style={compactCard} label={t(`onboarding.bell_score_baseline.${v}`)} isSelected={bellScore === v} onPress={() => setBellScore(v)} />
+          ))}
+
+          <Text style={[styles.editFieldLabel, { color: textSecondary }]}>{t('profile.field_pem_onset_delay')}</Text>
+          {PEM_ONSET_DELAYS.map((v) => (
+            <OptionCard key={v} style={compactCard} label={t(`onboarding.pem_onset_delay.${v}`)} isSelected={pemOnsetDelay === v} onPress={() => setPemOnsetDelay(v)} />
+          ))}
+
+          <Text style={[styles.editFieldLabel, { color: textSecondary }]}>{t('profile.field_pem_duration')}</Text>
+          {PEM_DURATIONS.map((v) => (
+            <OptionCard key={v} style={compactCard} label={t(`onboarding.pem_duration_typical.${v}`)} isSelected={pemDuration === v} onPress={() => setPemDuration(v)} />
+          ))}
+
+          <Text style={[styles.editFieldLabel, { color: textSecondary }]}>{t('profile.field_mobility_status')}</Text>
+          {MOBILITY_STATUSES.map((v) => (
+            <OptionCard key={v} style={compactCard} label={t(`onboarding.mobility_status.${v}`)} isSelected={mobilityStatus === v} onPress={() => setMobilityStatus(v)} />
+          ))}
+
+          <EditSectionHeader label={t('profile.section_symptoms')} color={textSecondary} />
+
+          <Text style={[styles.editFieldLabel, { color: textSecondary }]}>{t('profile.field_primary_symptoms')}</Text>
+          {PRIMARY_SYMPTOMS.map((v) => (
+            <MultiSelectCard key={v} style={compactCard} label={t(`onboarding.primary_symptoms.${v}`)} isSelected={primarySymptoms.includes(v)} onPress={() => setPrimarySymptoms((arr) => toggle(arr, v))} />
+          ))}
+
+          <Text style={[styles.editFieldLabel, { color: textSecondary }]}>{t('profile.field_comorbidities')}</Text>
+          {COMORBIDITIES.map((v) => (
+            <MultiSelectCard key={v} style={compactCard} label={t(`onboarding.comorbidities.${v}`)} isSelected={comorbidities.includes(v)} onPress={() => setComorbidities((arr) => toggle(arr, v))} />
+          ))}
+
+          <EditSectionHeader label={t('profile.section_lifestyle')} color={textSecondary} />
+
+          <Text style={[styles.editFieldLabel, { color: textSecondary }]}>{t('profile.field_medications')}</Text>
+          {MEDICATIONS.map((v) => (
+            <MultiSelectCard key={v} style={compactCard} label={t(`onboarding.medications.${v}`)} isSelected={medications.includes(v)} onPress={() => setMedications((arr) => toggle(arr, v))} />
+          ))}
+
+          <Text style={[styles.editFieldLabel, { color: textSecondary }]}>{t('profile.field_challenges')}</Text>
+          {CHALLENGES.map((v) => (
+            <MultiSelectCard key={v} style={compactCard} label={t(`onboarding.challenges.${v}`)} isSelected={challenges.includes(v)} onPress={() => setChallenges((arr) => toggle(arr, v))} />
+          ))}
+
+          <EditSectionHeader label={t('profile.section_ai')} color={textSecondary} />
+          <Text style={[styles.editFieldLabel, { color: textSecondary }]}>{t('profile.field_ai_context')}</Text>
+          <TextInput
+            style={[styles.aiContextInput, { color: textPrimary, borderColor: cardBorder }]}
+            value={aiContext}
+            onChangeText={setAiContext}
+            placeholder={t('profile.ai_context_placeholder')}
+            placeholderTextColor={textSecondary}
+            multiline
+            numberOfLines={4}
+          />
+
+          <TouchableOpacity onPress={handleSave} disabled={isSaving} activeOpacity={0.8} style={[styles.modalSaveBtn, { marginTop: Spacing.xl, opacity: isSaving ? 0.6 : 1 }]}>
+            {isSaving ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.modalSaveText}>{t('common.save_changes')}</Text>}
+          </TouchableOpacity>
+        </ScrollView>
       </View>
+    </Modal>
+  );
+}
+
+// ─── SummaryRow ─────────────────────────────────────────────────────────────────
+
+function SummaryRow({ label, value, isDark }: { label: string; value: string; isDark: boolean }) {
+  return (
+    <View style={styles.summaryRow}>
+      <Text style={[styles.summaryLabel, isDark && styles.textSecDark]}>{label}</Text>
+      <Text style={[styles.summaryValue, isDark && styles.textPrimaryDark]} numberOfLines={1}>{value}</Text>
+    </View>
+  );
+}
+
+// ─── ProfileScreen ──────────────────────────────────────────────────────────────
+
+export default function ProfileScreen() {
+  const { t } = useTranslation();
+  const isDark = useColorScheme() === 'dark';
+  const { user, signOut } = useAuth();
+  const { profile, saveProfile } = useProfile();
+  const { isAvailable: healthAvailable, isConnected: healthConnected, todayData: healthData, connect: connectHealth, disconnect: disconnectHealth } = useHealthData();
+
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isTogglingHealth, setIsTogglingHealth] = useState(false);
+
+  const checkScheduled = useCallback(async () => {
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    setNotificationsEnabled(scheduled.some((n) => n.identifier === 'daily-checkin'));
+  }, []);
+
+  useFocusEffect(useCallback(() => { checkScheduled(); }, [checkScheduled]));
+
+  const notificationTime = profile?.notification_time ?? '20:00';
+
+  const handleToggleNotifications = async (value: boolean) => {
+    setNotificationsEnabled(value);
+    if (value) {
+      const granted = await requestNotificationPermissions();
+      if (!granted) {
+        setNotificationsEnabled(false);
+        Alert.alert(t('profile.notifications_denied_title'), t('profile.notifications_denied_body'));
+        return;
+      }
+      await scheduleDailyCheckIn(notificationTime);
+    } else {
+      await cancelNotification('daily-checkin');
+    }
+  };
+
+  const handleTimeChange = async (_: unknown, selected?: Date) => {
+    setShowTimePicker(false);
+    if (!selected) return;
+    const timeString = dateToTime(selected);
+    await saveProfile({ notification_time: timeString });
+    if (notificationsEnabled) await scheduleDailyCheckIn(timeString);
+  };
+
+  const handleToggleHealth = async (value: boolean) => {
+    setIsTogglingHealth(true);
+    try {
+      if (value) {
+        await connectHealth();
+      } else {
+        await disconnectHealth();
+      }
+    } finally {
+      setIsTogglingHealth(false);
+    }
+  };
+
+  const handleSignOut = () => {
+    Alert.alert(t('profile.sign_out_confirm_title'), '', [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('profile.sign_out'), style: 'destructive', onPress: () => signOut() },
+    ]);
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(t('profile.delete_account_confirm_title'), t('profile.delete_account_confirm_body'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('profile.delete_account'),
+        style: 'destructive',
+        onPress: async () => {
+          if (!user) return;
+          setIsDeletingAccount(true);
+          try {
+            await deleteAllUserData(user.id);
+            await signOut();
+          } catch (err) {
+            console.error('Delete account error:', err);
+            Alert.alert(t('common.error'), t('profile.error_delete_account'));
+          } finally {
+            setIsDeletingAccount(false);
+          }
+        },
+      },
+    ]);
+  };
+
+  const labelOrNotSet = (key: string | null, ns: string): string => (key ? t(`onboarding.${ns}.${key}`) : t('profile.not_set'));
+  const listOrNotSet = (arr: string[] | undefined, ns: string): string =>
+    arr && arr.length > 0 ? arr.map((v) => t(`onboarding.${ns}.${v}`)).join(', ') : t('profile.not_set');
+
+  return (
+    <SafeAreaView style={[styles.screen, isDark && styles.screenDark]}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{(user?.email ?? 'U').charAt(0).toUpperCase()}</Text>
+          </View>
+          <Text style={[styles.email, isDark && styles.textPrimaryDark]} numberOfLines={1}>{user?.email}</Text>
+        </View>
+
+        <View style={[styles.section, isDark && styles.sectionDark]}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('profile.section_your_profile')}</Text>
+            <TouchableOpacity onPress={() => setShowEditModal(true)}>
+              <Text style={styles.editLink}>{t('profile.edit')}</Text>
+            </TouchableOpacity>
+          </View>
+          <SummaryRow isDark={isDark} label={t('profile.field_diagnosis_criteria')} value={labelOrNotSet(profile?.diagnosis_criteria ?? null, 'diagnosis_criteria')} />
+          <SummaryRow isDark={isDark} label={t('profile.field_diagnosis_years')} value={labelOrNotSet(profile?.diagnosis_years ?? null, 'diagnosis_years')} />
+          <SummaryRow isDark={isDark} label={t('profile.field_bell_baseline')} value={profile?.bell_score_baseline !== null && profile?.bell_score_baseline !== undefined ? String(profile.bell_score_baseline) : t('profile.not_set')} />
+          <SummaryRow isDark={isDark} label={t('profile.field_pem_onset_delay')} value={labelOrNotSet(profile?.pem_onset_delay ?? null, 'pem_onset_delay')} />
+          <SummaryRow isDark={isDark} label={t('profile.field_pem_duration')} value={labelOrNotSet(profile?.pem_duration_typical ?? null, 'pem_duration_typical')} />
+          <SummaryRow isDark={isDark} label={t('profile.field_mobility_status')} value={labelOrNotSet(profile?.mobility_status ?? null, 'mobility_status')} />
+          <SummaryRow isDark={isDark} label={t('profile.field_primary_symptoms')} value={listOrNotSet(profile?.primary_symptoms, 'primary_symptoms')} />
+          <SummaryRow isDark={isDark} label={t('profile.field_comorbidities')} value={listOrNotSet(profile?.comorbidities, 'comorbidities')} />
+          <SummaryRow isDark={isDark} label={t('profile.field_medications')} value={listOrNotSet(profile?.medications, 'medications')} />
+        </View>
+
+        <View style={[styles.section, isDark && styles.sectionDark]}>
+          <View style={styles.rowBetween}>
+            <View style={styles.rowTextGroup}>
+              <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('profile.section_reminders')}</Text>
+              <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('profile.reminder_hint')}</Text>
+            </View>
+            <Switch value={notificationsEnabled} onValueChange={handleToggleNotifications} trackColor={{ true: Colors.primary }} />
+          </View>
+          {notificationsEnabled && (
+            <TouchableOpacity onPress={() => setShowTimePicker(true)} style={styles.timeRow}>
+              <Text style={styles.editLink}>{t('profile.reminder_time', { time: notificationTime })}</Text>
+            </TouchableOpacity>
+          )}
+          {showTimePicker && (
+            <DateTimePicker value={timeToDate(notificationTime)} mode="time" display="spinner" onChange={handleTimeChange} />
+          )}
+        </View>
+
+        <View style={[styles.section, isDark && styles.sectionDark]}>
+          <View style={styles.rowBetween}>
+            <View style={styles.rowTextGroup}>
+              <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('profile.section_health')}</Text>
+              <Text style={[styles.hint, isDark && styles.textSecDark]}>
+                {healthAvailable ? t('profile.health_hint') : t('profile.health_unavailable')}
+              </Text>
+            </View>
+            {healthAvailable && (
+              isTogglingHealth
+                ? <ActivityIndicator color={Colors.primary} />
+                : <Switch value={healthConnected} onValueChange={handleToggleHealth} trackColor={{ true: Colors.primary }} />
+            )}
+          </View>
+          {healthConnected && (
+            <View style={styles.healthGrid}>
+              {healthData?.steps !== null && healthData?.steps !== undefined && (
+                <View style={styles.healthStat}>
+                  <Text style={[styles.healthValue, isDark && styles.textPrimaryDark]}>{healthData.steps.toLocaleString()}</Text>
+                  <Text style={[styles.healthLabel, isDark && styles.textSecDark]}>{t('dashboard.health_steps')}</Text>
+                </View>
+              )}
+              {healthData?.sleep_duration !== null && healthData?.sleep_duration !== undefined && (
+                <View style={styles.healthStat}>
+                  <Text style={[styles.healthValue, isDark && styles.textPrimaryDark]}>{healthData.sleep_duration}h</Text>
+                  <Text style={[styles.healthLabel, isDark && styles.textSecDark]}>{t('dashboard.health_sleep')}</Text>
+                </View>
+              )}
+              {healthData?.hrv !== null && healthData?.hrv !== undefined && (
+                <View style={styles.healthStat}>
+                  <Text style={[styles.healthValue, isDark && styles.textPrimaryDark]}>{healthData.hrv}ms</Text>
+                  <Text style={[styles.healthLabel, isDark && styles.textSecDark]}>{t('dashboard.health_hrv')}</Text>
+                </View>
+              )}
+              {healthData?.resting_heart_rate !== null && healthData?.resting_heart_rate !== undefined && (
+                <View style={styles.healthStat}>
+                  <Text style={[styles.healthValue, isDark && styles.textPrimaryDark]}>{healthData.resting_heart_rate}bpm</Text>
+                  <Text style={[styles.healthLabel, isDark && styles.textSecDark]}>{t('dashboard.health_resting_hr')}</Text>
+                </View>
+              )}
+            </View>
+          )}
+        </View>
+
+        <View style={[styles.section, isDark && styles.sectionDark]}>
+          <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('profile.section_account')}</Text>
+          <Button label={t('profile.sign_out')} onPress={handleSignOut} variant="secondary" />
+          <Button
+            label={isDeletingAccount ? t('profile.deleting') : t('profile.delete_account')}
+            onPress={handleDeleteAccount}
+            variant="outline"
+            isLoading={isDeletingAccount}
+            style={styles.deleteButton}
+            textStyle={{ color: Colors.error }}
+          />
+        </View>
+
+        <View style={styles.bottomPad} />
+      </ScrollView>
+
+      <ProfileEditModal
+        visible={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        isDark={isDark}
+        initial={{
+          age_range: profile?.age_range ?? null,
+          biological_sex: profile?.biological_sex ?? null,
+          diagnosis_criteria: profile?.diagnosis_criteria ?? null,
+          diagnosis_years: profile?.diagnosis_years ?? null,
+          bell_score_baseline: profile?.bell_score_baseline ?? null,
+          pem_onset_delay: profile?.pem_onset_delay ?? null,
+          pem_duration_typical: profile?.pem_duration_typical ?? null,
+          mobility_status: profile?.mobility_status ?? null,
+          primary_symptoms: profile?.primary_symptoms ?? [],
+          comorbidities: profile?.comorbidities ?? [],
+          medications: profile?.medications ?? [],
+          challenges: profile?.challenges ?? [],
+          ai_context: profile?.ai_context ?? '',
+        }}
+        onSave={async (updates) => { await saveProfile(updates); }}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { flex: 1, justifyContent: 'flex-end', padding: Spacing.lg },
+  screen: { flex: 1, backgroundColor: Colors.background },
+  screenDark: { backgroundColor: Colors.backgroundDark },
+  scrollContent: { padding: Spacing.lg, gap: Spacing.md },
+  textPrimaryDark: { color: Colors.textPrimaryDark },
+  textSecDark: { color: Colors.textSecondaryDark },
+
+  header: { alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm },
+  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: FontSize.xxl, fontWeight: '800', fontFamily: FontFamily.extraBold, color: Colors.primaryDark },
+  email: { fontSize: FontSize.sm, color: Colors.textSecondary },
+
+  section: { backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, gap: Spacing.sm },
+  sectionDark: { backgroundColor: Colors.surfaceDark, borderColor: Colors.borderDark },
+  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sectionLabel: { fontSize: FontSize.md, fontWeight: '700', fontFamily: FontFamily.bold, color: Colors.textPrimary },
+  editLink: { fontSize: FontSize.sm, color: Colors.primary, fontWeight: '600' },
+  hint: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 2 },
+
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', gap: Spacing.md, paddingVertical: 4 },
+  summaryLabel: { fontSize: FontSize.sm, color: Colors.textSecondary, flexShrink: 0 },
+  summaryValue: { fontSize: FontSize.sm, color: Colors.textPrimary, fontWeight: '600', flex: 1, textAlign: 'right' },
+
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: Spacing.md },
+  rowTextGroup: { flex: 1 },
+  timeRow: { marginTop: Spacing.xs },
+
+  healthGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md, marginTop: Spacing.xs },
+  healthStat: { minWidth: '40%', gap: 2 },
+  healthValue: { fontSize: FontSize.lg, fontWeight: '800', fontFamily: FontFamily.extraBold, color: Colors.textPrimary },
+  healthLabel: { fontSize: FontSize.xs, color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.3 },
+
+  deleteButton: { borderColor: Colors.error },
+
+  bottomPad: { height: Spacing.xxl },
+
+  editModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md, borderBottomWidth: 1 },
+  editModalTitle: { fontSize: FontSize.lg, fontWeight: '800', fontFamily: FontFamily.extraBold },
+  editModalClose: { fontSize: FontSize.md, fontWeight: '600' },
+  editModalContent: { padding: Spacing.lg, paddingBottom: Spacing.xxl },
+  editFieldLabel: { fontSize: FontSize.sm, fontWeight: '600', fontFamily: FontFamily.semiBold, marginBottom: Spacing.xs, marginTop: Spacing.sm },
+  aiContextInput: { borderWidth: 1, borderRadius: BorderRadius.md, padding: Spacing.sm, fontSize: FontSize.sm, minHeight: 90, textAlignVertical: 'top' },
+  modalSaveBtn: { backgroundColor: Colors.primary, borderRadius: BorderRadius.md, paddingVertical: Spacing.md, alignItems: 'center' },
+  modalSaveText: { color: '#FFFFFF', fontSize: FontSize.lg, fontWeight: '600', fontFamily: FontFamily.semiBold },
 });
