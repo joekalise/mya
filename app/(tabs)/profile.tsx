@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
   healthGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md, marginTop: Spacing.xs },
   healthStat: { minWidth: '40%', gap: 2 },
   healthValue: { fontSize: FontSize.lg, fontWeight: '800', fontFamily: FontFamily.extraBold, color: Colors.textPrimary },
-  healthLabel: { fontSize: FontSize.xs, color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.3 },
+  healthLabel: { fontSize: FontSize.xs, color: Colors.textSecondary },
 
   deleteButton: { borderColor: Colors.error },
 

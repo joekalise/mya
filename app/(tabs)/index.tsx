@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
   },
   statCardDark: { backgroundColor: Colors.surfaceDark, borderColor: Colors.borderDark },
   statValue: { fontSize: FontSize.xxl, fontWeight: '800', fontFamily: FontFamily.extraBold, color: Colors.textPrimary },
-  statLabel: { fontSize: FontSize.xs, color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.3 },
+  statLabel: { fontSize: FontSize.xs, color: Colors.textSecondary },
 
   section: { backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, gap: Spacing.xs },
   sectionDark: { backgroundColor: Colors.surfaceDark, borderColor: Colors.borderDark },
