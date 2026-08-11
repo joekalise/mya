@@ -296,3 +296,11 @@ profile.notifications_denied_title
 profile.notifications_denied_body
 profile.error_save
 profile.error_delete_account
+crashes.title
+crashes.info_title
+crashes.info_message
+insights.info_title
+insights.info_message
+update_banner.title
+update_banner.subtitle
+update_banner.update_btn

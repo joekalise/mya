@@ -11,6 +11,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/common/Button';
+import { ProfileButton } from '@/components/common/ProfileButton';
+import { InfoButton } from '@/components/common/InfoButton';
 import { Colors } from '@/constants/colors';
 import { FontSize, Spacing, BorderRadius, FontFamily } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -76,10 +78,16 @@ export default function InsightsScreen() {
   return (
     <SafeAreaView style={[styles.screen, isDark && styles.screenDark]}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.headerTitle, isDark && styles.textPrimaryDark]}>{t('insights.title')}</Text>
+        <View style={styles.headerRow}>
+          <Text style={[styles.headerTitle, isDark && styles.textPrimaryDark]}>{t('insights.title')}</Text>
+          <ProfileButton />
+        </View>
 
         <View style={[styles.section, isDark && styles.sectionDark]}>
-          <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('insights.ai_card_title')}</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('insights.ai_card_title')}</Text>
+            <InfoButton title={t('insights.info_title')} message={t('insights.info_message')} />
+          </View>
 
           {insight ? (
             <View style={styles.insightBody}>
@@ -125,7 +133,9 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
   screenDark: { backgroundColor: Colors.backgroundDark },
   scrollContent: { padding: Spacing.lg, gap: Spacing.md },
-  headerTitle: { fontSize: FontSize.xl, fontWeight: '800', fontFamily: FontFamily.extraBold, color: Colors.textPrimary },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerTitle: { fontSize: FontSize.xl, fontWeight: '800', fontFamily: FontFamily.extraBold, color: Colors.textPrimary, flex: 1, marginRight: Spacing.sm },
+  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   textPrimaryDark: { color: Colors.textPrimaryDark },
   textSecDark: { color: Colors.textSecondaryDark },
 

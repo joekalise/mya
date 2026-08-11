@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { DragSlider } from '@/components/common/DragSlider';
 import { Button } from '@/components/common/Button';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
+import { ProfileButton } from '@/components/common/ProfileButton';
 import { Colors } from '@/constants/colors';
 import { FontSize, Spacing, BorderRadius, FontFamily } from '@/constants/theme';
 import { useDailyLog } from '@/hooks/useDailyLog';
@@ -144,7 +145,10 @@ export default function PaceScreen() {
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
       >
-        <Text style={[styles.headerDate, isDark && styles.textPrimaryDark]}>{todayDateLabel()}</Text>
+        <View style={styles.headerRow}>
+          <Text style={[styles.headerDate, isDark && styles.textPrimaryDark]}>{todayDateLabel()}</Text>
+          <ProfileButton />
+        </View>
 
         {error && <ErrorMessage message={error} />}
 
@@ -354,7 +358,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
   screenDark: { backgroundColor: Colors.backgroundDark },
   scrollContent: { padding: Spacing.lg, gap: Spacing.md },
-  headerDate: { fontSize: FontSize.xl, fontWeight: '800', fontFamily: FontFamily.extraBold, color: Colors.textPrimary },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerDate: { fontSize: FontSize.xl, fontWeight: '800', fontFamily: FontFamily.extraBold, color: Colors.textPrimary, flex: 1, marginRight: Spacing.sm },
   textPrimaryDark: { color: Colors.textPrimaryDark },
   textSecDark: { color: Colors.textSecondaryDark },
 

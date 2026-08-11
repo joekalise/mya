@@ -13,6 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/common/Button';
+import { ProfileButton } from '@/components/common/ProfileButton';
+import { InfoButton } from '@/components/common/InfoButton';
 import { Colors } from '@/constants/colors';
 import { FontSize, Spacing, BorderRadius, FontFamily } from '@/constants/theme';
 import { useCrashes } from '@/hooks/useCrashes';
@@ -100,6 +102,14 @@ export default function CrashesScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        <View style={styles.headerRow}>
+          <View style={styles.headerTitleRow}>
+            <Text style={[styles.headerTitle, isDark && styles.textPrimaryDark]}>{t('crashes.title')}</Text>
+            <InfoButton title={t('crashes.info_title')} message={t('crashes.info_message')} />
+          </View>
+          <ProfileButton />
+        </View>
+
         {activeCrash ? (
           <View style={[styles.activeCard, isDark && styles.activeCardDark]}>
             <Text style={styles.activeTitle}>⚠ {t('crashes.active_title')}</Text>
@@ -235,6 +245,9 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   activeCardDark: { backgroundColor: Colors.error + '22' },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, flex: 1, marginRight: Spacing.sm },
+  headerTitle: { fontSize: FontSize.xl, fontWeight: '800', fontFamily: FontFamily.extraBold, color: Colors.textPrimary },
   activeTitle: { fontSize: FontSize.md, fontWeight: '800', fontFamily: FontFamily.extraBold, color: Colors.error },
   activeSince: { fontSize: FontSize.sm, color: Colors.textSecondary },
 

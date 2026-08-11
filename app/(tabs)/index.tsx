@@ -9,6 +9,7 @@ import { FontSize, Spacing, BorderRadius, FontFamily } from '@/constants/theme';
 import { useDailyLog } from '@/hooks/useDailyLog';
 import { useEnergyEnvelope } from '@/hooks/useEnergyEnvelope';
 import { useCrashes } from '@/hooks/useCrashes';
+import { ProfileButton } from '@/components/common/ProfileButton';
 
 function todayDateLabel(): string {
   return new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -46,7 +47,10 @@ export default function TodayScreen() {
   return (
     <SafeAreaView style={[styles.screen, isDark && styles.screenDark]}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.headerDate, isDark && styles.textPrimaryDark]}>{todayDateLabel()}</Text>
+        <View style={styles.headerRow}>
+          <Text style={[styles.headerDate, isDark && styles.textPrimaryDark]}>{todayDateLabel()}</Text>
+          <ProfileButton />
+        </View>
 
         {activeCrash && (
           <TouchableOpacity
@@ -121,7 +125,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
   screenDark: { backgroundColor: Colors.backgroundDark },
   scrollContent: { padding: Spacing.lg, gap: Spacing.md },
-  headerDate: { fontSize: FontSize.xl, fontWeight: '800', fontFamily: FontFamily.extraBold, color: Colors.textPrimary },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerDate: { fontSize: FontSize.xl, fontWeight: '800', fontFamily: FontFamily.extraBold, color: Colors.textPrimary, flex: 1, marginRight: Spacing.sm },
   textPrimaryDark: { color: Colors.textPrimaryDark },
   textSecDark: { color: Colors.textSecondaryDark },
 

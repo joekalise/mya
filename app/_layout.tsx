@@ -37,6 +37,7 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 configureRevenueCat();
 import { ProfileProvider, useProfile } from '@/contexts/ProfileContext';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { UpdateBanner } from '@/components/common/UpdateBanner';
 import * as Sentry from '@sentry/react-native';
 
 Sentry.init({
@@ -116,6 +117,7 @@ function RootNavigator() {
   return (
     <View style={{ flex: 1 }}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+      <UpdateBanner />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(onboarding)" />

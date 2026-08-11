@@ -258,7 +258,10 @@
     "ongoing": "Ongoing",
     "days_one": "{{count}} day",
     "days_other": "{{count}} days",
-    "delay_hours": "{{count}}h after exertion"
+    "delay_hours": "{{count}}h after exertion",
+    "title": "Crashes",
+    "info_title": "What counts as a crash?",
+    "info_message": "A crash is post-exertional malaise (PEM): a worsening of symptoms that follows physical, cognitive, emotional, or social exertion, usually starting anywhere from the same day up to 24-72 hours later, and often lasting well beyond the exertion itself. Logging it here, separately from your daily check-in, builds a record you can use to show the delay and its length."
   },
   "insights": {
     "title": "Insights",
@@ -270,7 +273,9 @@
     "dsq_sf_card_body": "The DePaul Symptom Questionnaire — Short Form, the validated ME/CFS research instrument.",
     "dsq_sf_last_taken": "Last taken {{date}}",
     "dsq_sf_never_taken": "Never taken",
-    "take_assessment": "Take assessment"
+    "take_assessment": "Take assessment",
+    "info_title": "How this works",
+    "info_message": "Mya looks for the strongest links between your exertion, crashes, and daily function over the last 28 days, including Apple Health data where it's connected, and summarises them in plain language with real numbers attached. It's evidence from your own data, not a diagnosis or medical advice."
   },
   "dsq_sf": {
     "title": "DSQ-SF Assessment",
@@ -342,5 +347,10 @@
     "notifications_denied_body": "Enable notifications in Settings to get a daily reminder.",
     "error_save": "Could not save your profile. Please try again.",
     "error_delete_account": "Could not delete your account. Please try again."
+  },
+  "update_banner": {
+    "title": "Update available",
+    "subtitle": "Tap to get the latest version",
+    "update_btn": "Update"
   }
 }

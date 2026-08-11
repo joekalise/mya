@@ -1,0 +1,77 @@
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Updates from 'expo-updates';
+import { useTranslation } from 'react-i18next';
+import { Colors } from '@/constants/colors';
+import { FontSize, Spacing, BorderRadius, FontFamily } from '@/constants/theme';
+
+export function UpdateBanner() {
+  const { t } = useTranslation();
+  const { isUpdateAvailable, isUpdatePending } = Updates.useUpdates();
+  const { top } = useSafeAreaInsets();
+  const [isApplying, setIsApplying] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+
+  if (__DEV__ || dismissed || (!isUpdateAvailable && !isUpdatePending)) return null;
+
+  async function handleUpdate() {
+    setIsApplying(true);
+    try {
+      if (isUpdateAvailable && !isUpdatePending) {
+        await Updates.fetchUpdateAsync();
+      }
+      await Updates.reloadAsync();
+    } catch {
+      setIsApplying(false);
+    }
+  }
+
+  return (
+    <View style={[styles.banner, { paddingTop: top + Spacing.sm }]}>
+      <View style={styles.left}>
+        <Text style={styles.title}>{t('update_banner.title')}</Text>
+        <Text style={styles.subtitle}>{t('update_banner.subtitle')}</Text>
+      </View>
+      <View style={styles.right}>
+        <TouchableOpacity onPress={handleUpdate} disabled={isApplying} style={styles.updateBtn} activeOpacity={0.8}>
+          {isApplying ? (
+            <ActivityIndicator color="#FFFFFF" size="small" />
+          ) : (
+            <Text style={styles.updateText}>{t('update_banner.update_btn')}</Text>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setDismissed(true)} style={styles.dismissBtn} activeOpacity={0.7}>
+          <Text style={styles.dismissText}>✕</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  banner: {
+    backgroundColor: Colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    gap: Spacing.md,
+  },
+  left: { flex: 1 },
+  title: { color: '#FFFFFF', fontSize: FontSize.sm, fontWeight: '700', fontFamily: FontFamily.bold },
+  subtitle: { color: '#FFFFFF', opacity: 0.85, fontSize: FontSize.xs },
+  right: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  updateBtn: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderRadius: BorderRadius.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+    minWidth: 70,
+    alignItems: 'center',
+  },
+  updateText: { color: '#FFFFFF', fontSize: FontSize.sm, fontWeight: '700', fontFamily: FontFamily.bold },
+  dismissBtn: { padding: 4 },
+  dismissText: { color: '#FFFFFF', fontSize: 16, opacity: 0.7 },
+});
