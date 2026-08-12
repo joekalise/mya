@@ -30,6 +30,12 @@ function hrvColor(hrv: number): string {
   return Colors.success;
 }
 
+function restingHRColor(bpm: number): string {
+  if (bpm >= 100 || bpm < 45) return Colors.error;
+  if (bpm >= 90 || bpm < 50) return Colors.warning;
+  return Colors.success;
+}
+
 function todayDateLabel(): string {
   return new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 }
@@ -175,7 +181,7 @@ export default function TodayScreen() {
                 <View style={[styles.healthRowDivider, isDark && styles.healthRowDividerDark]} />
                 <View style={styles.todaySummaryRow}>
                   <View style={styles.todaySummaryItem}>
-                    <Text style={[styles.healthStatValue, isDark && styles.textPrimaryDark]}>{healthData.resting_heart_rate}bpm</Text>
+                    <Text style={[styles.healthStatValue, { color: restingHRColor(healthData.resting_heart_rate) }]}>{healthData.resting_heart_rate}bpm</Text>
                     <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_resting_hr')}</Text>
                   </View>
                 </View>
