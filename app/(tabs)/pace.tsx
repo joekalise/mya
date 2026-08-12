@@ -17,6 +17,7 @@ import { DragSlider } from '@/components/common/DragSlider';
 import { Button } from '@/components/common/Button';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
 import { ProfileButton } from '@/components/common/ProfileButton';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { Colors } from '@/constants/colors';
 import { FontSize, Spacing, BorderRadius, FontFamily } from '@/constants/theme';
 import { useDailyLog } from '@/hooks/useDailyLog';
@@ -134,7 +135,11 @@ export default function PaceScreen() {
   const isLoading = logLoading || envelopeLoading;
 
   if (isLoading) {
-    return <SafeAreaView style={[styles.screen, isDark && styles.screenDark]} />;
+    return (
+      <SafeAreaView style={[styles.screen, isDark && styles.screenDark]}>
+        <LoadingSpinner fullScreen message={t('common.loading')} />
+      </SafeAreaView>
+    );
   }
 
   return (

@@ -11,6 +11,7 @@ import { useEnergyEnvelope } from '@/hooks/useEnergyEnvelope';
 import { useCrashes } from '@/hooks/useCrashes';
 import { useHealthData } from '@/hooks/useHealthData';
 import { ProfileButton } from '@/components/common/ProfileButton';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 
 function stepsColor(steps: number): string {
   if (steps < 3000 || steps > 12000) return Colors.error;
@@ -79,7 +80,11 @@ export default function TodayScreen() {
   const isLoading = logLoading || envelopeLoading || crashLoading;
 
   if (isLoading) {
-    return <SafeAreaView style={[styles.screen, isDark && styles.screenDark]} />;
+    return (
+      <SafeAreaView style={[styles.screen, isDark && styles.screenDark]}>
+        <LoadingSpinner fullScreen message={t('common.loading')} />
+      </SafeAreaView>
+    );
   }
 
   const overBudget = spent !== null && available !== null && spent > available;

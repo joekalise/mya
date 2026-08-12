@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/common/Button';
 import { ProfileButton } from '@/components/common/ProfileButton';
 import { InfoButton } from '@/components/common/InfoButton';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { Colors } from '@/constants/colors';
 import { FontSize, Spacing, BorderRadius, FontFamily } from '@/constants/theme';
 import { useCrashes } from '@/hooks/useCrashes';
@@ -92,7 +93,11 @@ export default function CrashesScreen() {
   const pastCrashes = crashes.filter((c) => c.id !== activeCrash?.id);
 
   if (isLoading) {
-    return <SafeAreaView style={[styles.screen, isDark && styles.screenDark]} />;
+    return (
+      <SafeAreaView style={[styles.screen, isDark && styles.screenDark]}>
+        <LoadingSpinner fullScreen message={t('common.loading')} />
+      </SafeAreaView>
+    );
   }
 
   return (
