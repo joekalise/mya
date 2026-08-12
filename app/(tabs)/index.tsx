@@ -96,109 +96,110 @@ export default function TodayScreen() {
             <Button label={t('dashboard.log_now')} onPress={() => router.push('/(tabs)/pace')} />
           </View>
         ) : (
-          <>
-            <View style={[styles.todaySummaryCard, isDark && styles.todaySummaryCardDark]}>
-              <View style={styles.todaySummaryHeader}>
-                <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('dashboard.todays_log')}</Text>
-                <TouchableOpacity onPress={() => router.push('/(tabs)/pace')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Text style={styles.todaySummaryEdit}>{t('dashboard.edit')}</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.todaySummaryRow}>
-                <View style={styles.todaySummaryItem}>
-                  <Text style={[styles.todaySummaryValue, isDark && styles.textPrimaryDark]}>{todayLog?.bell_score_today ?? '—'}</Text>
-                  <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.bell_score')}</Text>
-                </View>
-                <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
-                <View style={styles.todaySummaryItem}>
-                  <Text style={[styles.todaySummaryValue, isDark && styles.textPrimaryDark]}>{todayLog?.fatigue_score ?? '—'}</Text>
-                  <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.fatigue')}</Text>
-                </View>
-                <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
-                <View style={styles.todaySummaryItem}>
-                  <Text style={[styles.todaySummaryValue, isDark && styles.textPrimaryDark]}>{todayLog?.cognitive_dysfunction_score ?? '—'}</Text>
-                  <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.cognitive')}</Text>
-                </View>
-                {todayLog?.medications_taken && (
-                  <>
-                    <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
-                    <View style={styles.todaySummaryItem}>
-                      <Text style={[
-                        styles.todaySummaryValue,
-                        { color: todayLog.medications_taken === 'yes' ? Colors.success : todayLog.medications_taken === 'partial' ? Colors.warning : Colors.error },
-                      ]}>
-                        {todayLog.medications_taken === 'yes' ? '✓' : todayLog.medications_taken === 'partial' ? '~' : '✗'}
-                      </Text>
-                      <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.meds')}</Text>
-                    </View>
-                  </>
-                )}
-              </View>
+          <View style={[styles.todaySummaryCard, isDark && styles.todaySummaryCardDark]}>
+            <View style={styles.todaySummaryHeader}>
+              <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('dashboard.todays_log')}</Text>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/pace')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Text style={styles.todaySummaryEdit}>{t('dashboard.edit')}</Text>
+              </TouchableOpacity>
             </View>
+            <View style={styles.todaySummaryRow}>
+              <View style={styles.todaySummaryItem}>
+                <Text style={[styles.todaySummaryValue, isDark && styles.textPrimaryDark]}>{todayLog?.bell_score_today ?? '—'}</Text>
+                <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.bell_score')}</Text>
+              </View>
+              <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
+              <View style={styles.todaySummaryItem}>
+                <Text style={[styles.todaySummaryValue, isDark && styles.textPrimaryDark]}>{todayLog?.fatigue_score ?? '—'}</Text>
+                <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.fatigue')}</Text>
+              </View>
+              <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
+              <View style={styles.todaySummaryItem}>
+                <Text style={[styles.todaySummaryValue, isDark && styles.textPrimaryDark]}>{todayLog?.cognitive_dysfunction_score ?? '—'}</Text>
+                <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.cognitive')}</Text>
+              </View>
+              {todayLog?.medications_taken && (
+                <>
+                  <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
+                  <View style={styles.todaySummaryItem}>
+                    <Text style={[
+                      styles.todaySummaryValue,
+                      { color: todayLog.medications_taken === 'yes' ? Colors.success : todayLog.medications_taken === 'partial' ? Colors.warning : Colors.error },
+                    ]}>
+                      {todayLog.medications_taken === 'yes' ? '✓' : todayLog.medications_taken === 'partial' ? '~' : '✗'}
+                    </Text>
+                    <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.meds')}</Text>
+                  </View>
+                </>
+              )}
+            </View>
+          </View>
+        )}
 
-            {healthConnected && healthData && (
-              <View style={[styles.healthCard, isDark && styles.healthCardDark]}>
-                <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('dashboard.health_title')}</Text>
-                <View style={styles.todaySummaryRow}>
-                  {healthData.steps !== null && (
-                    <>
-                      <View style={styles.todaySummaryItem}>
-                        <Text style={[styles.healthStatValue, { color: stepsColor(healthData.steps) }]}>{(healthData.steps / 1000).toFixed(1)}k</Text>
-                        <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_steps')}</Text>
-                      </View>
-                      {(healthData.sleep_duration !== null || healthData.hrv !== null) && (
-                        <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
-                      )}
-                    </>
+        {/* Independent of manual logging — HealthKit syncs on its own */}
+        {healthConnected && healthData && (
+          <View style={[styles.healthCard, isDark && styles.healthCardDark]}>
+            <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('dashboard.health_title')}</Text>
+            <View style={styles.todaySummaryRow}>
+              {healthData.steps !== null && (
+                <>
+                  <View style={styles.todaySummaryItem}>
+                    <Text style={[styles.healthStatValue, { color: stepsColor(healthData.steps) }]}>{(healthData.steps / 1000).toFixed(1)}k</Text>
+                    <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_steps')}</Text>
+                  </View>
+                  {(healthData.sleep_duration !== null || healthData.hrv !== null) && (
+                    <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
                   )}
-                  {healthData.sleep_duration !== null && (
-                    <>
-                      <View style={styles.todaySummaryItem}>
-                        <Text style={[styles.healthStatValue, { color: sleepColor(healthData.sleep_duration) }]}>{healthData.sleep_duration}h</Text>
-                        <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_sleep')}</Text>
-                      </View>
-                      {healthData.hrv !== null && (
-                        <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
-                      )}
-                    </>
-                  )}
+                </>
+              )}
+              {healthData.sleep_duration !== null && (
+                <>
+                  <View style={styles.todaySummaryItem}>
+                    <Text style={[styles.healthStatValue, { color: sleepColor(healthData.sleep_duration) }]}>{healthData.sleep_duration}h</Text>
+                    <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_sleep')}</Text>
+                  </View>
                   {healthData.hrv !== null && (
-                    <View style={styles.todaySummaryItem}>
-                      <Text style={[styles.healthStatValue, { color: hrvColor(healthData.hrv) }]}>{healthData.hrv}</Text>
-                      <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_hrv')}</Text>
-                    </View>
+                    <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
                   )}
+                </>
+              )}
+              {healthData.hrv !== null && (
+                <View style={styles.todaySummaryItem}>
+                  <Text style={[styles.healthStatValue, { color: hrvColor(healthData.hrv) }]}>{healthData.hrv}</Text>
+                  <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_hrv')}</Text>
                 </View>
-                {healthData.resting_heart_rate !== null && (
-                  <>
-                    <View style={[styles.healthRowDivider, isDark && styles.healthRowDividerDark]} />
-                    <View style={styles.todaySummaryRow}>
-                      <View style={styles.todaySummaryItem}>
-                        <Text style={[styles.healthStatValue, isDark && styles.textPrimaryDark]}>{healthData.resting_heart_rate}bpm</Text>
-                        <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_resting_hr')}</Text>
-                      </View>
-                    </View>
-                  </>
-                )}
-              </View>
-            )}
-
-            {available !== null && (
-              <View style={[styles.section, isDark && styles.sectionDark]}>
-                <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('dashboard.energy')}</Text>
-                <View style={[styles.progressTrack, isDark && styles.progressTrackDark]}>
-                  <View style={[styles.progressFill, { width: `${fillPct}%`, backgroundColor: overBudget ? Colors.error : Colors.success }]} />
+              )}
+            </View>
+            {healthData.resting_heart_rate !== null && (
+              <>
+                <View style={[styles.healthRowDivider, isDark && styles.healthRowDividerDark]} />
+                <View style={styles.todaySummaryRow}>
+                  <View style={styles.todaySummaryItem}>
+                    <Text style={[styles.healthStatValue, isDark && styles.textPrimaryDark]}>{healthData.resting_heart_rate}bpm</Text>
+                    <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_resting_hr')}</Text>
+                  </View>
                 </View>
-                <Text style={[styles.hint, isDark && styles.textSecDark]}>
-                  {spent ?? 0} / {available}
-                </Text>
-              </View>
+              </>
             )}
+          </View>
+        )}
 
-            <TouchableOpacity onPress={() => router.push('/(tabs)/pace')}>
-              <Text style={styles.editLink}>{t('tracker.edit_today')}</Text>
-            </TouchableOpacity>
-          </>
+        {todayLogged && available !== null && (
+          <View style={[styles.section, isDark && styles.sectionDark]}>
+            <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('dashboard.energy')}</Text>
+            <View style={[styles.progressTrack, isDark && styles.progressTrackDark]}>
+              <View style={[styles.progressFill, { width: `${fillPct}%`, backgroundColor: overBudget ? Colors.error : Colors.success }]} />
+            </View>
+            <Text style={[styles.hint, isDark && styles.textSecDark]}>
+              {spent ?? 0} / {available}
+            </Text>
+          </View>
+        )}
+
+        {todayLogged && (
+          <TouchableOpacity onPress={() => router.push('/(tabs)/pace')}>
+            <Text style={styles.editLink}>{t('tracker.edit_today')}</Text>
+          </TouchableOpacity>
         )}
 
         <View style={styles.bottomPad} />
