@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   todaySummaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' },
   todaySummaryItem: { alignItems: 'center', flex: 1, gap: 4 },
   todaySummaryValue: { fontSize: FontSize.xxl, fontWeight: '900', fontFamily: FontFamily.extraBold, lineHeight: 30, color: Colors.textPrimary },
-  todaySummaryItemLabel: { fontSize: FontSize.xs, color: Colors.textSecondary, fontWeight: '500', fontFamily: FontFamily.medium },
+  todaySummaryItemLabel: { fontSize: FontSize.xs, color: Colors.textSecondary, fontWeight: '500', fontFamily: FontFamily.medium, textAlign: 'center' },
   todaySummaryDivider: { width: 1, height: 40, backgroundColor: Colors.border },
   todaySummaryDividerDark: { backgroundColor: Colors.borderDark },
 
