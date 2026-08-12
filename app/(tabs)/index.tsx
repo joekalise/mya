@@ -36,6 +36,20 @@ function restingHRColor(bpm: number): string {
   return Colors.success;
 }
 
+// Bell scale: 100 is normal function, 0 is bedridden — higher is better.
+function bellScoreColor(score: number): string {
+  if (score >= 70) return Colors.success;
+  if (score >= 40) return Colors.warning;
+  return Colors.error;
+}
+
+// Fatigue / cognitive dysfunction: 0-10, higher is worse.
+function severityScoreColor(score: number): string {
+  if (score >= 7) return Colors.error;
+  if (score >= 4) return Colors.warning;
+  return Colors.success;
+}
+
 function todayDateLabel(): string {
   return new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 }
@@ -111,17 +125,32 @@ export default function TodayScreen() {
             </View>
             <View style={styles.todaySummaryRow}>
               <View style={styles.todaySummaryItem}>
-                <Text style={[styles.todaySummaryValue, isDark && styles.textPrimaryDark]}>{todayLog?.bell_score_today ?? '—'}</Text>
+                <Text style={[
+                  styles.todaySummaryValue,
+                  todayLog?.bell_score_today !== null && todayLog?.bell_score_today !== undefined
+                    ? { color: bellScoreColor(todayLog.bell_score_today) }
+                    : (isDark && styles.textPrimaryDark),
+                ]}>{todayLog?.bell_score_today ?? '—'}</Text>
                 <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.bell_score')}</Text>
               </View>
               <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
               <View style={styles.todaySummaryItem}>
-                <Text style={[styles.todaySummaryValue, isDark && styles.textPrimaryDark]}>{todayLog?.fatigue_score ?? '—'}</Text>
+                <Text style={[
+                  styles.todaySummaryValue,
+                  todayLog?.fatigue_score !== null && todayLog?.fatigue_score !== undefined
+                    ? { color: severityScoreColor(todayLog.fatigue_score) }
+                    : (isDark && styles.textPrimaryDark),
+                ]}>{todayLog?.fatigue_score ?? '—'}</Text>
                 <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.fatigue')}</Text>
               </View>
               <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
               <View style={styles.todaySummaryItem}>
-                <Text style={[styles.todaySummaryValue, isDark && styles.textPrimaryDark]}>{todayLog?.cognitive_dysfunction_score ?? '—'}</Text>
+                <Text style={[
+                  styles.todaySummaryValue,
+                  todayLog?.cognitive_dysfunction_score !== null && todayLog?.cognitive_dysfunction_score !== undefined
+                    ? { color: severityScoreColor(todayLog.cognitive_dysfunction_score) }
+                    : (isDark && styles.textPrimaryDark),
+                ]}>{todayLog?.cognitive_dysfunction_score ?? '—'}</Text>
                 <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.cognitive')}</Text>
               </View>
               {todayLog?.medications_taken && (
