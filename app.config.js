@@ -123,6 +123,9 @@ module.exports = {
         backgroundColor: '#F97316',
       },
       package: 'com.myaapp.app',
+      // Explicit rather than eas.json's autoIncrement, which doesn't reliably
+      // write back into a dynamic (JS) app config. Bump by hand each Android build.
+      versionCode: 1,
       // TODO: add once the Firebase project exists (see infra checklist)
       // ...(isAndroid && { googleServicesFile: './google-services.json' }),
       permissions: [

@@ -36,8 +36,7 @@
     "production-android": {
       "android": {
         "image": "latest",
-        "buildType": "app-bundle",
-        "versionCode": 1
+        "buildType": "app-bundle"
       },
       "channel": "production",
       "env": {
