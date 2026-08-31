@@ -34,10 +34,10 @@
       }
     },
     "production-android": {
-      "autoIncrement": true,
       "android": {
         "image": "latest",
-        "buildType": "app-bundle"
+        "buildType": "app-bundle",
+        "versionCode": 1
       },
       "channel": "production",
       "env": {

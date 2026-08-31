@@ -9,7 +9,7 @@ import {
   fetchTodayHealthData,
   disconnectHealth,
   HealthSnapshot,
-} from '@/services/healthKit';
+} from '@/services/health';
 import { saveHealthData, getTodayHealthData } from '@/services/database';
 import { useAuth } from '@/contexts/AuthContext';
 

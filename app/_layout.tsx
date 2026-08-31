@@ -38,6 +38,8 @@ configureRevenueCat();
 import { ProfileProvider, useProfile } from '@/contexts/ProfileContext';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { UpdateBanner } from '@/components/common/UpdateBanner';
+import { useLockPortraitOnPhones } from '@/hooks/useLockPortraitOnPhones';
+import { registerBackgroundHealthSync } from '@/services/backgroundHealthSync';
 import * as Sentry from '@sentry/react-native';
 
 Sentry.init({
@@ -70,6 +72,12 @@ function RootNavigator() {
   // so we must not show the Stack until we confirm arrival at the right place.
   const [isReady, setIsReady] = useState(false);
   const isFirstNavRef = useRef(true);
+
+  useLockPortraitOnPhones();
+
+  useEffect(() => {
+    registerBackgroundHealthSync().catch(() => {});
+  }, []);
 
   const inAuthGroup = segments[0] === '(auth)';
   const inOnboardingGroup = segments[0] === '(onboarding)';

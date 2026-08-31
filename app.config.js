@@ -1,8 +1,40 @@
-const { withDangerousMod } = require('@expo/config-plugins');
+const { withDangerousMod, withAndroidManifest } = require('@expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
 
 const isAndroid = process.env.EAS_BUILD_PLATFORM === 'android';
+
+// RevenueCat's Android SDK pulls in Google Play Billing, which transitively depends on
+// play-services-code-scanner. That library's own manifest declares
+// GmsBarcodeScanningDelegateActivity with a hardcoded PORTRAIT lock — Mya never uses
+// barcode scanning at all, but Google's large-screen policy scan flags it anyway since
+// it ships inside the final APK regardless. Override the inherited attribute via the
+// standard Android manifest-merger tools:replace mechanism (there's no way to configure
+// this from our own code otherwise — it's declared inside the library's AAR).
+function withBarcodeScannerOrientationFix(config) {
+  return withAndroidManifest(config, (config) => {
+    const manifest = config.modResults.manifest;
+    manifest.$['xmlns:tools'] = 'http://schemas.android.com/tools';
+
+    const application = manifest.application?.[0];
+    if (!application) return config;
+
+    const activityName = 'com.google.mlkit.vision.codescanner.internal.GmsBarcodeScanningDelegateActivity';
+    application.activity = application.activity ?? [];
+    const alreadyPresent = application.activity.some((a) => a.$['android:name'] === activityName);
+    if (!alreadyPresent) {
+      application.activity.push({
+        $: {
+          'android:name': activityName,
+          'android:screenOrientation': 'unspecified',
+          'tools:replace': 'android:screenOrientation',
+        },
+      });
+    }
+
+    return config;
+  });
+}
 
 function withFmtFix(config) {
   return withDangerousMod(config, [
@@ -53,11 +85,10 @@ function withFmtFix(config) {
 
 module.exports = {
   expo: {
-    newArchEnabled: false,
+    newArchEnabled: true,
     name: 'Mya',
     slug: 'mya',
-    version: '1.0.0',
-    orientation: 'portrait',
+    version: '1.1.0',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
     splash: {
@@ -76,6 +107,14 @@ module.exports = {
         ITSAppUsesNonExemptEncryption: false,
         UIBackgroundModes: ['fetch', 'processing'],
         BGTaskSchedulerPermittedIdentifiers: ['MYA_HEALTH_SYNC'],
+        // Explicit override, since the top-level `orientation` key was removed to
+        // satisfy Android's large-screen policy — this preserves iOS's exact prior
+        // portrait-only behavior (explicit infoPlist values take precedence over
+        // the plugin's own generation).
+        UISupportedInterfaceOrientations: [
+          'UIInterfaceOrientationPortrait',
+          'UIInterfaceOrientationPortraitUpsideDown',
+        ],
       },
     },
     android: {
@@ -89,6 +128,18 @@ module.exports = {
       permissions: [
         'android.permission.RECEIVE_BOOT_COMPLETED',
         'android.permission.WAKE_LOCK',
+        // Health Connect requires a matching <uses-permission> for every record
+        // type requested via requestPermission(), or it silently grants none
+        // (no error, no dialog) — see PERMISSIONS in src/services/healthConnect.ts.
+        'android.permission.health.READ_STEPS',
+        'android.permission.health.READ_SLEEP',
+        'android.permission.health.READ_HEART_RATE',
+        'android.permission.health.READ_HEART_RATE_VARIABILITY',
+        'android.permission.health.READ_ACTIVE_CALORIES_BURNED',
+        'android.permission.health.READ_EXERCISE',
+        'android.permission.health.READ_OXYGEN_SATURATION',
+        'android.permission.health.READ_RESPIRATORY_RATE',
+        'android.permission.health.READ_MINDFULNESS',
       ],
     },
     plugins: [
@@ -105,6 +156,10 @@ module.exports = {
       // iOS-only plugins
       ...(!isAndroid ? [['expo-apple-authentication']] : []),
       ...(!isAndroid ? ['react-native-health'] : []),
+      // Android-only: registers HealthConnectPermissionDelegate in MainActivity and
+      // adds the required health permissions to AndroidManifest. Without it,
+      // requestPermission() resolves with nothing granted instead of prompting.
+      ...(isAndroid ? ['react-native-health-connect'] : []),
       'expo-background-fetch',
       'expo-task-manager',
       [
@@ -126,9 +181,13 @@ module.exports = {
               { name: 'GoogleUtilities', modular_headers: true },
             ],
           },
+          android: {
+            minSdkVersion: 26, // Health Connect requires API 26+
+          },
         },
       ],
       withFmtFix,
+      withBarcodeScannerOrientationFix,
     ],
     updates: {
       url: 'https://u.expo.dev/3e1d73b6-852e-402d-930a-c1a3f5da1c38',
@@ -136,7 +195,10 @@ module.exports = {
       fallbackToCacheTimeout: 0,
       checkAutomatically: 'ON_LOAD',
     },
-    runtimeVersion: '1.0.0',
+    // Bumped alongside the SDK 54 / New Architecture upgrade: OTA JS bundles built
+    // against the new native modules (react-native-health-connect, reanimated 4,
+    // etc.) must not be served to any device still running the pre-upgrade binary.
+    runtimeVersion: '2.0.0',
     scheme: 'mya',
     extra: {
       router: {
