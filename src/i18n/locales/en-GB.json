@@ -157,7 +157,8 @@
     "loading": "Loading...",
     "cancel": "Cancel",
     "error": "Something went wrong",
-    "save_changes": "Save changes"
+    "save_changes": "Save changes",
+    "back": "Back"
   },
   "tracker": {
     "bell_score_today": "Functional level today",
@@ -288,7 +289,12 @@
     "dsq_sf_never_taken": "Never taken",
     "take_assessment": "Take assessment",
     "info_title": "How this works",
-    "info_message": "Mya looks for the strongest links between your exertion, crashes, and daily function over the last 28 days, including Apple Health data where it's connected, and summarises them in plain language with real numbers attached. It's evidence from your own data, not a diagnosis or medical advice."
+    "info_message": "Mya looks for the strongest links between your exertion, crashes, and daily function over the last 28 days, including Apple Health data where it's connected, and summarises them in plain language with real numbers attached. It's evidence from your own data, not a diagnosis or medical advice.",
+    "premium_hint": "AI-generated weekly insights are a Mya Premium feature.",
+    "unlock": "Unlock with Premium",
+    "chat_card_title": "Ask Mya",
+    "chat_card_body": "Ask questions about your own logs in plain language, backed by your actual data.",
+    "chat_card_button": "Open chat"
   },
   "dsq_sf": {
     "title": "DSQ-SF Assessment",
@@ -428,5 +434,21 @@
     "after_trial": "After your {{days}}-day free trial, {{price}}/month is billed automatically.",
     "start_free_trial": "Start free trial",
     "restore_purchases": "Restore purchases"
+  },
+  "ai_chat": {
+    "title": "Ask Mya",
+    "clear": "Clear",
+    "clear_history": "Clear this conversation?",
+    "greeting": "Hi, I'm Mya. Ask me anything about your logs, crashes, or patterns, I have access to your tracking data.",
+    "placeholder": "Ask a question...",
+    "send": "Send",
+    "error": "Sorry, I couldn't get a response just now. Please try again in a moment.",
+    "disclaimer": "Mya can be wrong. This isn't medical advice, always check with your doctor.",
+    "locked_title": "Ask Mya is a Premium feature",
+    "locked_body": "Chat with an AI that has access to your actual logs, crashes, and health data, and ask it anything in plain language.",
+    "upgrade_cta": "Unlock with Premium",
+    "consent_off_title": "AI data sharing is off",
+    "consent_off_body": "You've turned off AI data sharing, so Mya can't use your logs to answer questions. Turn it back on from your profile to use chat.",
+    "go_to_profile": "Go to profile"
   }
 }

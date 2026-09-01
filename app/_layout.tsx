@@ -131,6 +131,7 @@ function RootNavigator() {
         <Stack.Screen name="(onboarding)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="dsq-sf" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="ai-chat" options={{ presentation: 'modal' }} />
       </Stack>
     </View>
   );

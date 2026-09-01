@@ -21,6 +21,8 @@ import { getDailyLogs, getRecentExertionEvents, getCrashes, getLatestDsqSfScore 
 import { generateWeeklyInsight, WeeklyInsight } from '@/services/aiInsights';
 import { useHealthHistory } from '@/hooks/useHealthHistory';
 import { useRecoveryData } from '@/hooks/useRecoveryData';
+import { useSubscription } from '@/hooks/useSubscription';
+import { PremiumModal } from '@/components/common/PremiumModal';
 import { DsqSfScore } from '@/types';
 
 export default function InsightsScreen() {
@@ -31,12 +33,38 @@ export default function InsightsScreen() {
   const { profile } = useProfile();
   const { history: healthHistory } = useHealthHistory(28);
   const { data: recoveryData } = useRecoveryData();
+  const { isSubscribed, isLoading: subLoading, monthlyPrice, trialDays, purchase, restore } = useSubscription();
 
   const [logCount, setLogCount] = useState(0);
   const [latestDsq, setLatestDsq] = useState<DsqSfScore | null>(null);
   const [insight, setInsight] = useState<WeeklyInsight | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoadingMeta, setIsLoadingMeta] = useState(true);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [isPurchasing, setIsPurchasing] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+
+  const handlePurchase = useCallback(async () => {
+    setIsPurchasing(true);
+    try {
+      const success = await purchase();
+      if (!success) Alert.alert('', t('profile.purchase_unavailable'));
+    } catch (err) {
+      Alert.alert(t('common.error'), err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsPurchasing(false);
+    }
+  }, [purchase, t]);
+
+  const handleRestore = useCallback(async () => {
+    setIsRestoring(true);
+    try {
+      const success = await restore();
+      if (!success) Alert.alert('', t('profile.no_purchases'));
+    } finally {
+      setIsRestoring(false);
+    }
+  }, [restore, t]);
 
   const loadMeta = useCallback(async () => {
     if (!user) return;
@@ -89,27 +117,42 @@ export default function InsightsScreen() {
             <InfoButton title={t('insights.info_title')} message={t('insights.info_message')} />
           </View>
 
-          {insight ? (
-            <View style={styles.insightBody}>
-              <Text style={[styles.insightSummary, isDark && styles.textPrimaryDark]}>{insight.summary}</Text>
-              {insight.points.map((p) => (
-                <View key={p.title} style={styles.insightPoint}>
-                  <Text style={[styles.insightPointTitle, isDark && styles.textPrimaryDark]}>{p.title}</Text>
-                  <Text style={[styles.insightPointDetail, isDark && styles.textSecDark]}>{p.detail}</Text>
+          {!subLoading && !isSubscribed ? (
+            <>
+              <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('insights.premium_hint')}</Text>
+              <Button label={t('insights.unlock')} onPress={() => setShowPremiumModal(true)} variant="primary" />
+            </>
+          ) : (
+            <>
+              {insight ? (
+                <View style={styles.insightBody}>
+                  <Text style={[styles.insightSummary, isDark && styles.textPrimaryDark]}>{insight.summary}</Text>
+                  {insight.points.map((p) => (
+                    <View key={p.title} style={styles.insightPoint}>
+                      <Text style={[styles.insightPointTitle, isDark && styles.textPrimaryDark]}>{p.title}</Text>
+                      <Text style={[styles.insightPointDetail, isDark && styles.textSecDark]}>{p.detail}</Text>
+                    </View>
+                  ))}
                 </View>
-              ))}
-            </View>
-          ) : logCount < 3 && !isLoadingMeta ? (
-            <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('insights.not_enough_data')}</Text>
-          ) : null}
+              ) : logCount < 3 && !isLoadingMeta ? (
+                <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('insights.not_enough_data')}</Text>
+              ) : null}
 
-          <Button
-            label={isGenerating ? t('insights.generating') : t('insights.generate')}
-            onPress={handleGenerate}
-            isLoading={isGenerating}
-            disabled={logCount < 3}
-            variant={insight ? 'outline' : 'primary'}
-          />
+              <Button
+                label={isGenerating ? t('insights.generating') : t('insights.generate')}
+                onPress={handleGenerate}
+                isLoading={isGenerating}
+                disabled={logCount < 3}
+                variant={insight ? 'outline' : 'primary'}
+              />
+            </>
+          )}
+        </View>
+
+        <View style={[styles.section, isDark && styles.sectionDark]}>
+          <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('insights.chat_card_title')}</Text>
+          <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('insights.chat_card_body')}</Text>
+          <Button label={t('insights.chat_card_button')} onPress={() => router.push('/ai-chat')} variant="outline" />
         </View>
 
         <View style={[styles.section, isDark && styles.sectionDark]}>
@@ -125,6 +168,18 @@ export default function InsightsScreen() {
 
         <View style={styles.bottomPad} />
       </ScrollView>
+
+      <PremiumModal
+        visible={showPremiumModal}
+        onClose={() => setShowPremiumModal(false)}
+        onPurchase={handlePurchase}
+        onRestore={handleRestore}
+        monthlyPrice={monthlyPrice}
+        trialDays={trialDays}
+        isPurchasing={isPurchasing}
+        isRestoring={isRestoring}
+        isDark={isDark}
+      />
     </SafeAreaView>
   );
 }

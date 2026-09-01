@@ -214,3 +214,53 @@ ${buildDataSummary(logs, exertionEvents, crashes, healthHistory, recoveryData)}`
     throw new Error('AI insights are temporarily unavailable. The rest of the app is working normally.');
   }
 }
+
+// ─── sendChatMessage ──────────────────────────────────────────────────────────
+
+export async function sendChatMessage(params: {
+  messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+  logs: DailyLog[];
+  exertionEvents: ExertionEvent[];
+  crashes: Crash[];
+  profile: UserProfile;
+  healthHistory?: HealthData[];
+  recoveryData?: RecoverySnapshot | null;
+  aiContext?: string;
+  language?: string;
+}): Promise<string> {
+  const { messages, logs, exertionEvents, crashes, profile, healthHistory = [], recoveryData, aiContext, language } = params;
+  const langInstruction = language && language !== 'en-GB' ? `\nRespond in ${language}.` : '';
+
+  const systemPrompt = `You are Mya, a knowledgeable companion for someone living with ME/CFS, think of yourself as a friend who also has ME/CFS, who happens to have read all the research and can see all their tracking data.${langInstruction}
+
+You have the user's full symptom log, exertion events, crash (PEM) history, health data, and profile. When a question relates to their patterns or history, answer using their actual data, real numbers, not generic advice.
+
+Here is the user's profile and recent data:
+
+${buildProfileSummary(profile)}
+
+${buildDataSummary(logs, exertionEvents, crashes, healthHistory, recoveryData)}
+${aiContext ? `\nAdditional context from user: ${aiContext}` : ''}
+
+How to respond:
+- Match length to the question. A simple question gets 1-2 sentences. A pattern or trigger question gets a detailed breakdown with numbers.
+- When the data is relevant, lead with what it actually shows: "On your X logged days, Y averaged Z..."
+- Sound like a knowledgeable friend, not a medical professional or wellness app. Be direct, not clinical.
+- Never diagnose, never say "you are at risk", never recommend specific medications or doses.
+- Do not open with "Great question!", "Of course!", "Certainly!", or any filler. Never start a response with "I".
+- Key ME/CFS factors: post-exertional malaise (PEM) and its delay, pacing within the energy envelope, unrefreshing sleep, cognitive dysfunction, orthostatic intolerance.
+- If something is outside your knowledge or can't be answered from the data, say so clearly and suggest they raise it with their doctor.
+- Never use em dashes or en dashes. Use a comma, period, or plain hyphen instead.`;
+
+  try {
+    return await callClaude({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+    });
+  } catch (err) {
+    console.error('sendChatMessage error:', err);
+    throw new Error('AI chat is temporarily unavailable. Please try again in a moment.');
+  }
+}
