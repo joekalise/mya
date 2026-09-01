@@ -83,6 +83,35 @@ export async function purchasePremium(): Promise<boolean> {
   }
 }
 
+export async function getMonthlyPriceString(): Promise<{
+  price: string | null;
+  trialDays: number | null;
+}> {
+  if (_configureError) return { price: null, trialDays: null };
+  try {
+    const offerings = await Purchases.getOfferings();
+    const pkg = offerings.current?.monthly;
+    if (!pkg) return { price: null, trialDays: null };
+
+    const price = pkg.product.priceString ?? null;
+    const intro = pkg.product.introPrice;
+    let trialDays: number | null = null;
+    if (intro && intro.price === 0) {
+      // Convert intro period to days
+      const units = intro.periodNumberOfUnits ?? 1;
+      switch (intro.periodUnit) {
+        case 'DAY':   trialDays = units; break;
+        case 'WEEK':  trialDays = units * 7; break;
+        case 'MONTH': trialDays = units * 30; break;
+        default:      trialDays = units;
+      }
+    }
+    return { price, trialDays };
+  } catch {
+    return { price: null, trialDays: null };
+  }
+}
+
 export async function restorePurchases(): Promise<boolean> {
   if (_configureError) return false;
   try {

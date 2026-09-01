@@ -389,11 +389,44 @@
       "remove_body": "Remove this medication and its reminder?",
       "remove_btn": "Remove"
     },
-    "error_med_name": "Please enter a medication name."
+    "error_med_name": "Please enter a medication name.",
+    "purchase_unavailable": "Purchase could not be completed. Please try again.",
+    "no_purchases": "No previous purchases found to restore."
   },
   "update_banner": {
     "title": "Update available",
     "subtitle": "Tap to get the latest version",
     "update_btn": "Update"
+  },
+  "subscription": {
+    "trial_sublabel": "Start with a {{days}}-day free trial",
+    "cancel_note": "Cancel any time from Settings, Apple ID, Subscriptions.",
+    "cancel_note_android": "Cancel any time from Google Play, Subscriptions.",
+    "terms_of_use": "Terms of Use",
+    "privacy_policy": "Privacy Policy",
+    "already_subscribed": "You're on Mya Premium",
+    "manage": "Manage subscription"
+  },
+  "premium_modal": {
+    "header_title": "Go further with Mya",
+    "header_subtitle": "Unlock AI-generated insights and a chat you can ask anything about your own data.",
+    "section_see_in_action": "See it in action",
+    "mock_insight_title": "This week",
+    "mock_insight_body": "Crashes followed physical exertion by 36 to 48 hours in 4 of 5 logged instances this month.",
+    "mock_insight_chip_1": "PEM delay",
+    "mock_insight_chip_2": "Exertion type",
+    "mock_insight_chip_3": "HRV trend",
+    "mock_chat_title": "Ask Mya",
+    "mock_chat_user": "Is my fatigue worse on days I sleep less?",
+    "mock_chat_ai": "Yes. On nights under 6 hours, next-day fatigue averaged 7.2 versus 4.8 on nights over 7 hours.",
+    "mock_chat_prompt": "Ask about your own logs, in your own words",
+    "section_whats_included": "What's included",
+    "feature_1_title": "AI-generated weekly insight reports",
+    "feature_2_title": "Unlimited AI chat about your data",
+    "feature_3_title": "Priority support",
+    "price_per_month": "/month",
+    "after_trial": "After your {{days}}-day free trial, {{price}}/month is billed automatically.",
+    "start_free_trial": "Start free trial",
+    "restore_purchases": "Restore purchases"
   }
 }

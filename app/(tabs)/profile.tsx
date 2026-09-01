@@ -13,6 +13,7 @@ import {
   Alert,
   Platform,
   KeyboardAvoidingView,
+  Linking,
   useColorScheme,
   useWindowDimensions,
 } from 'react-native';
@@ -30,6 +31,8 @@ import { useProfile } from '@/contexts/ProfileContext';
 import { useHealthData } from '@/hooks/useHealthData';
 import { useMedications } from '@/hooks/useMedications';
 import { useMedicationTracking } from '@/hooks/useMedicationTracking';
+import { useSubscription } from '@/hooks/useSubscription';
+import { PremiumModal } from '@/components/common/PremiumModal';
 import { deleteAllUserData } from '@/services/database';
 import { requestNotificationPermissions, scheduleDailyCheckIn, cancelNotification } from '@/services/notifications';
 import {
@@ -551,6 +554,7 @@ export default function ProfileScreen() {
   const { isAvailable: healthAvailable, isConnected: healthConnected, connect: connectHealth, disconnect: disconnectHealth } = useHealthData();
   const { medications, isLoading: medsLoading, addMedication, updateMedication, deleteMedication } = useMedications();
   const { tracks: tracksMedication, setTracks: setTracksMedication } = useMedicationTracking();
+  const { isSubscribed, isLoading: subLoading, monthlyPrice, trialDays, purchase, restore } = useSubscription();
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
@@ -559,6 +563,41 @@ export default function ProfileScreen() {
   const [isTogglingHealth, setIsTogglingHealth] = useState(false);
   const [showAddMed, setShowAddMed] = useState(false);
   const [editingMed, setEditingMed] = useState<MedicationReminder | null>(null);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [isPurchasing, setIsPurchasing] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+
+  const handlePurchase = useCallback(async () => {
+    setIsPurchasing(true);
+    try {
+      const success = await purchase();
+      if (!success) Alert.alert('', t('profile.purchase_unavailable'));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      Alert.alert(t('common.error'), msg);
+    } finally {
+      setIsPurchasing(false);
+    }
+  }, [purchase, t]);
+
+  const handleRestore = useCallback(async () => {
+    setIsRestoring(true);
+    try {
+      const success = await restore();
+      if (!success) Alert.alert('', t('profile.no_purchases'));
+    } catch (err) {
+      console.error('Restore error:', err);
+    } finally {
+      setIsRestoring(false);
+    }
+  }, [restore, t]);
+
+  const handleManageSubscription = useCallback(() => {
+    const url = Platform.OS === 'android'
+      ? 'https://play.google.com/store/account/subscriptions?package=com.myaapp.app'
+      : 'https://apps.apple.com/account/subscriptions';
+    Linking.openURL(url).catch(() => {});
+  }, []);
 
   const medicationDosesPerDay = profile?.medication_doses_per_day ?? 1;
 
@@ -678,6 +717,43 @@ export default function ProfileScreen() {
           </View>
           <Text style={[styles.email, isDark && styles.textPrimaryDark]} numberOfLines={1}>{user?.email}</Text>
         </View>
+
+        {!subLoading && (
+          isSubscribed ? (
+            <View style={[styles.section, { borderColor: Colors.primary }]}>
+              <View style={styles.rowBetween}>
+                <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('subscription.already_subscribed')}</Text>
+                <View style={styles.premiumBadge}>
+                  <Text style={styles.premiumBadgeText}>PREMIUM</Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={handleManageSubscription} activeOpacity={0.8}>
+                <Text style={styles.editLink}>{t('subscription.manage')}</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPress={() => setShowPremiumModal(true)}
+              activeOpacity={0.85}
+              style={[styles.section, styles.premiumTeaser, isDark && styles.sectionDark, { borderColor: Colors.primary + '50' }]}
+            >
+              <View style={styles.premiumTeaserRow}>
+                <View style={{ flex: 1, gap: 4 }}>
+                  <View style={styles.premiumBadge}>
+                    <Text style={styles.premiumBadgeText}>PREMIUM</Text>
+                  </View>
+                  <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('premium_modal.header_title')}</Text>
+                  <Text style={[styles.hint, isDark && styles.textSecDark]}>
+                    {monthlyPrice && trialDays
+                      ? t('premium_modal.after_trial', { days: trialDays, price: monthlyPrice })
+                      : t('premium_modal.header_subtitle')}
+                  </Text>
+                </View>
+                <Text style={{ fontSize: FontSize.lg, color: Colors.primary }}>›</Text>
+              </View>
+            </TouchableOpacity>
+          )
+        )}
 
         <View style={[styles.section, isDark && styles.sectionDark]}>
           <View style={styles.sectionHeaderRow}>
@@ -841,6 +917,18 @@ export default function ProfileScreen() {
         isDark={isDark}
         profileMeds={profile?.medications}
       />
+
+      <PremiumModal
+        visible={showPremiumModal}
+        onClose={() => setShowPremiumModal(false)}
+        onPurchase={handlePurchase}
+        onRestore={handleRestore}
+        monthlyPrice={monthlyPrice}
+        trialDays={trialDays}
+        isPurchasing={isPurchasing}
+        isRestoring={isRestoring}
+        isDark={isDark}
+      />
     </SafeAreaView>
   );
 }
@@ -874,6 +962,11 @@ const styles = StyleSheet.create({
 
 
   deleteButton: { borderColor: Colors.error },
+
+  premiumTeaser: { borderWidth: 1.5 },
+  premiumTeaserRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  premiumBadge: { alignSelf: 'flex-start', backgroundColor: Colors.primary, borderRadius: BorderRadius.sm, paddingHorizontal: 8, paddingVertical: 2 },
+  premiumBadgeText: { fontSize: 10, fontWeight: '800', fontFamily: FontFamily.extraBold, color: '#FFFFFF', letterSpacing: 0.5 },
 
   bottomPad: { height: Spacing.xxl },
 
