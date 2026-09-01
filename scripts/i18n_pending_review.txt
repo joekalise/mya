@@ -416,3 +416,15 @@ profile_ready.log_instead
 profile_ready.insights_title
 profile_ready.watch_title
 profile_ready.error_save
+crashes.edit_title
+crashes.edit_link
+crashes.dates_label
+crashes.start_label
+crashes.end_label
+crashes.date_placeholder
+crashes.reopen_this_crash
+crashes.delete_entry
+crashes.delete_title
+crashes.delete_body
+crashes.delete_confirm
+crashes.error_save

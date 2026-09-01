@@ -4,6 +4,7 @@ import {
   getCrashes,
   saveCrash as dbSaveCrash,
   updateCrash as dbUpdateCrash,
+  deleteCrash as dbDeleteCrash,
   getRecentExertionEvents,
 } from '@/services/database';
 import { Crash, CrashSeverity, ExertionEvent } from '@/types';
@@ -25,6 +26,8 @@ export function useCrashes(): {
     triggerEventId: string | null
   ) => Promise<void>;
   endActiveCrash: () => Promise<void>;
+  updateCrash: (id: string, updates: Partial<Crash>) => Promise<void>;
+  deleteCrash: (id: string) => Promise<void>;
   refresh: () => Promise<void>;
 } {
   const { user } = useAuth();
@@ -92,5 +95,15 @@ export function useCrashes(): {
     setCrashes((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
   }, [activeCrash]);
 
-  return { crashes, activeCrash, recentExertionEvents, isLoading, startCrash, endActiveCrash, refresh: load };
+  const updateCrash = useCallback(async (id: string, updates: Partial<Crash>) => {
+    const updated = await dbUpdateCrash(id, updates);
+    setCrashes((prev) => prev.map((c) => (c.id === id ? updated : c)));
+  }, []);
+
+  const deleteCrash = useCallback(async (id: string) => {
+    await dbDeleteCrash(id);
+    setCrashes((prev) => prev.filter((c) => c.id !== id));
+  }, []);
+
+  return { crashes, activeCrash, recentExertionEvents, isLoading, startCrash, endActiveCrash, updateCrash, deleteCrash, refresh: load };
 }

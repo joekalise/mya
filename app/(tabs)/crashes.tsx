@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useFocusEffect } from 'expo-router';
 import {
   View,
@@ -7,6 +7,9 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
   useColorScheme,
   Alert,
 } from 'react-native';
@@ -51,10 +54,157 @@ function severityColor(severity: CrashSeverity | null): string {
   return Colors.success;
 }
 
+// ─── EditCrashModal ─────────────────────────────────────────────────────────────
+
+interface EditCrashModalProps {
+  visible: boolean;
+  crash: Crash | null;
+  onClose: () => void;
+  onSave: (id: string, updates: Partial<Crash>) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+  isDark: boolean;
+}
+
+function EditCrashModal({ visible, crash, onClose, onSave, onDelete, isDark }: EditCrashModalProps) {
+  const { t } = useTranslation();
+  const [severity, setSeverity] = useState<CrashSeverity>('moderate');
+  const [symptoms, setSymptoms] = useState<string[]>([]);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [notes, setNotes] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (crash) {
+      setSeverity(crash.severity ?? 'moderate');
+      setSymptoms(crash.symptoms);
+      setStartDate(crash.start_date);
+      setEndDate(crash.end_date ?? '');
+      setNotes(crash.notes ?? '');
+    }
+  }, [crash]);
+
+  const handleSave = async () => {
+    if (!crash?.id) return;
+    setIsSaving(true);
+    try {
+      await onSave(crash.id, { severity, symptoms, start_date: startDate, end_date: endDate || null, notes });
+      onClose();
+    } catch {
+      Alert.alert(t('common.error'), t('crashes.error_save'));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = () => {
+    if (!crash?.id) return;
+    Alert.alert(t('crashes.delete_title'), t('crashes.delete_body'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('crashes.delete_confirm'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await onDelete(crash.id!);
+            onClose();
+          } catch {
+            Alert.alert(t('common.error'), t('crashes.error_save'));
+          }
+        },
+      },
+    ]);
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.editModalOverlay}>
+        <View style={[styles.editModalSheet, isDark && styles.editModalSheetDark]}>
+          <View style={styles.editModalHandle} />
+          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            <Text style={[styles.editModalTitle, isDark && styles.textPrimaryDark]}>{t('crashes.edit_title')}</Text>
+
+            <Text style={[styles.fieldLabel, isDark && styles.textSecDark]}>{t('crashes.severity')}</Text>
+            <View style={styles.chipRow}>
+              {SEVERITIES.map((v) => {
+                const selected = severity === v;
+                return (
+                  <TouchableOpacity key={v} onPress={() => setSeverity(v)} style={[styles.chip, isDark && styles.chipDark, selected && styles.chipSelected]}>
+                    <Text style={[styles.chipText, isDark && !selected && styles.chipTextDark, selected && styles.chipTextSelected]}>{t(`crashes.severity_${v}`)}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={[styles.fieldLabel, isDark && styles.textSecDark]}>{t('crashes.symptoms')}</Text>
+            <View style={styles.chipRow}>
+              {CRASH_SYMPTOMS.map((v) => {
+                const selected = symptoms.includes(v);
+                return (
+                  <TouchableOpacity key={v} onPress={() => setSymptoms((arr) => toggleMulti(arr, v))} style={[styles.chip, isDark && styles.chipDark, selected && styles.chipSelected]}>
+                    <Text style={[styles.chipText, isDark && !selected && styles.chipTextDark, selected && styles.chipTextSelected]}>{t(`crashes.symptom_${v}`)}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={[styles.fieldLabel, isDark && styles.textSecDark]}>{t('crashes.dates_label')}</Text>
+            <View style={styles.dateRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.dateInputLabel, isDark && styles.textSecDark]}>{t('crashes.start_label')}</Text>
+                <TextInput
+                  style={[styles.dateInput, isDark && styles.notesInputDark]}
+                  value={startDate}
+                  onChangeText={setStartDate}
+                  placeholder={t('crashes.date_placeholder')}
+                  placeholderTextColor={isDark ? Colors.textSecondaryDark : Colors.textSecondary}
+                  keyboardType="numbers-and-punctuation"
+                  returnKeyType="done"
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.dateInputLabel, isDark && styles.textSecDark]}>{t('crashes.end_label')}</Text>
+                <TextInput
+                  style={[styles.dateInput, isDark && styles.notesInputDark]}
+                  value={endDate}
+                  onChangeText={setEndDate}
+                  placeholder={t('crashes.date_placeholder')}
+                  placeholderTextColor={isDark ? Colors.textSecondaryDark : Colors.textSecondary}
+                  keyboardType="numbers-and-punctuation"
+                  returnKeyType="done"
+                />
+              </View>
+            </View>
+            {endDate !== '' && (
+              <TouchableOpacity onPress={() => setEndDate('')} style={styles.reopenLink} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Text style={styles.editLinkText}>{t('crashes.reopen_this_crash')}</Text>
+              </TouchableOpacity>
+            )}
+
+            <Text style={[styles.fieldLabel, isDark && styles.textSecDark]}>{t('crashes.notes_optional')}</Text>
+            <TextInput
+              style={[styles.notesInput, isDark && styles.notesInputDark]}
+              value={notes}
+              onChangeText={setNotes}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+
+            <Button label={t('common.save_changes')} onPress={handleSave} isLoading={isSaving} style={styles.editModalSaveBtn} />
+            <Button label={t('crashes.delete_entry')} onPress={handleDelete} variant="ghost" textStyle={{ color: Colors.error }} />
+            <Button label={t('common.cancel')} onPress={onClose} variant="ghost" />
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
 export default function CrashesScreen() {
   const { t } = useTranslation();
   const isDark = useColorScheme() === 'dark';
-  const { crashes, activeCrash, recentExertionEvents, isLoading, startCrash, endActiveCrash, refresh } = useCrashes();
+  const { crashes, activeCrash, recentExertionEvents, isLoading, startCrash, endActiveCrash, updateCrash, deleteCrash, refresh } = useCrashes();
 
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
 
@@ -64,6 +214,7 @@ export default function CrashesScreen() {
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isEnding, setIsEnding] = useState(false);
+  const [editingCrash, setEditingCrash] = useState<Crash | null>(null);
 
   const handleStart = async () => {
     setIsSaving(true);
@@ -210,12 +361,17 @@ export default function CrashesScreen() {
             <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('crashes.no_crashes_logged')}</Text>
           ) : (
             pastCrashes.map((crash: Crash) => (
-              <View key={crash.id} style={[styles.crashRow, isDark && styles.crashRowDark]}>
+              <TouchableOpacity
+                key={crash.id}
+                style={[styles.crashRow, isDark && styles.crashRowDark]}
+                onPress={() => setEditingCrash(crash)}
+                activeOpacity={0.7}
+              >
                 <View style={[styles.severityDot, { backgroundColor: severityColor(crash.severity) }]} />
                 <View style={styles.crashInfo}>
                   <Text style={[styles.crashTitle, isDark && styles.textPrimaryDark]}>
                     {dateLabel(crash.start_date)}
-                    {crash.end_date ? ` – ${dateLabel(crash.end_date)}` : ` (${t('crashes.ongoing')})`}
+                    {crash.end_date ? ` to ${dateLabel(crash.end_date)}` : ` (${t('crashes.ongoing')})`}
                   </Text>
                   {crash.pem_delay_hours !== null && (
                     <Text style={[styles.crashMeta, isDark && styles.textSecDark]}>
@@ -223,13 +379,23 @@ export default function CrashesScreen() {
                     </Text>
                   )}
                 </View>
-              </View>
+                <Text style={styles.editLinkText}>{t('crashes.edit_link')}</Text>
+              </TouchableOpacity>
             ))
           )}
         </View>
 
         <View style={styles.bottomPad} />
       </ScrollView>
+
+      <EditCrashModal
+        visible={editingCrash !== null}
+        crash={editingCrash}
+        onClose={() => setEditingCrash(null)}
+        onSave={updateCrash}
+        onDelete={deleteCrash}
+        isDark={isDark}
+      />
     </SafeAreaView>
   );
 }
@@ -295,6 +461,21 @@ const styles = StyleSheet.create({
   crashInfo: { flex: 1 },
   crashTitle: { fontSize: FontSize.sm, fontWeight: '600', fontFamily: FontFamily.semiBold, color: Colors.textPrimary },
   crashMeta: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 2 },
+  editLinkText: { fontSize: FontSize.sm, fontWeight: '600', fontFamily: FontFamily.semiBold, color: Colors.primary },
+
+  editModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  editModalSheet: { backgroundColor: Colors.surface, borderTopLeftRadius: BorderRadius.xl, borderTopRightRadius: BorderRadius.xl, padding: Spacing.lg, maxHeight: '85%' },
+  editModalSheetDark: { backgroundColor: Colors.surfaceDark },
+  editModalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: 'center', marginBottom: Spacing.md },
+  editModalTitle: { fontSize: FontSize.lg, fontWeight: '800', fontFamily: FontFamily.extraBold, color: Colors.textPrimary, marginBottom: Spacing.sm },
+  editModalSaveBtn: { marginTop: Spacing.md },
+  dateRow: { flexDirection: 'row', gap: Spacing.sm },
+  dateInputLabel: { fontSize: FontSize.xs, color: Colors.textSecondary, marginBottom: 4 },
+  dateInput: {
+    borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.md,
+    padding: Spacing.sm, fontSize: FontSize.sm, fontFamily: FontFamily.regular, color: Colors.textPrimary,
+  },
+  reopenLink: { marginTop: Spacing.xs, marginBottom: Spacing.xs },
 
   bottomPad: { height: Spacing.xxl },
 });

@@ -225,7 +225,6 @@ export default function PaceScreen() {
               {energySpent > energyAvailable && (
                 <Text style={styles.overBudgetText}>⚠ {t('pace.over_budget')}</Text>
               )}
-              <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('pace.energy_hint')}</Text>
             </View>
 
             <View style={[styles.section, isDark && styles.sectionDark]}>

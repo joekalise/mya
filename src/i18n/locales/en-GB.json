@@ -221,7 +221,6 @@
     "energy_envelope": "Energy envelope",
     "available": "Available energy",
     "spent": "Spent energy",
-    "energy_hint": "Rate each 0-100. This is Leonard Jason's Energy Envelope method: stay within your available energy to avoid triggering a crash.",
     "budget_hint": "Your daily budget. Adjust it if today is a lower-capacity day.",
     "over_budget": "Spent is higher than available today",
     "log_exertion": "Log exertion",
@@ -290,7 +289,19 @@
     "delay_hours": "{{count}}h after exertion",
     "title": "Crashes",
     "info_title": "What counts as a crash?",
-    "info_message": "A crash is post-exertional malaise (PEM): a worsening of symptoms that follows physical, cognitive, emotional, or social exertion, usually starting anywhere from the same day up to 24-72 hours later, and often lasting well beyond the exertion itself. Logging it here, separately from your daily check-in, builds a record you can use to show the delay and its length."
+    "info_message": "A crash is post-exertional malaise (PEM): a worsening of symptoms that follows physical, cognitive, emotional, or social exertion, usually starting anywhere from the same day up to 24-72 hours later, and often lasting well beyond the exertion itself. Logging it here, separately from your daily check-in, builds a record you can use to show the delay and its length.",
+    "edit_title": "Edit crash",
+    "edit_link": "Edit",
+    "dates_label": "Dates",
+    "start_label": "Start",
+    "end_label": "End",
+    "date_placeholder": "YYYY-MM-DD",
+    "reopen_this_crash": "Reopen this crash",
+    "delete_entry": "Delete crash",
+    "delete_title": "Delete this crash?",
+    "delete_body": "This can't be undone.",
+    "delete_confirm": "Delete",
+    "error_save": "Could not save. Please try again."
   },
   "insights": {
     "title": "Insights",

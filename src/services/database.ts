@@ -132,6 +132,11 @@ export async function updateCrash(id: string, updates: Partial<Crash>): Promise<
   return data as Crash;
 }
 
+export async function deleteCrash(id: string): Promise<void> {
+  const { error } = await supabase.from('crashes').delete().eq('id', id);
+  if (error) throw error;
+}
+
 export async function getCrashes(userId: string, limit: number): Promise<Crash[]> {
   const { data, error } = await supabase
     .from('crashes')
