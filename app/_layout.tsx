@@ -81,7 +81,6 @@ function RootNavigator() {
 
   const inAuthGroup = segments[0] === '(auth)';
   const inOnboardingGroup = segments[0] === '(onboarding)';
-  const inTabsGroup = segments[0] === '(tabs)';
 
   // Check for OTA update on every cold start and apply immediately if available
   useEffect(() => {
@@ -103,7 +102,11 @@ function RootNavigator() {
     } else if (!isOnboardingComplete) {
       if (!inOnboardingGroup) router.replace('/(onboarding)');
     } else {
-      if (!inTabsGroup) router.replace('/(tabs)');
+      // Only correct if still stuck in the auth/onboarding groups while
+      // already signed in and onboarded. Root-level modal routes like
+      // ai-chat/dsq-sf are neither (tabs) nor auth/onboarding, and must be
+      // left alone, not bounced back to (tabs) just for being outside it.
+      if (inAuthGroup || inOnboardingGroup) router.replace('/(tabs)');
     }
 
     if (isFirstNavRef.current) {
