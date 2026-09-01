@@ -42,17 +42,17 @@
     "bell_score_baseline": {
       "title": "How would you describe your typical day?",
       "subtitle": "This is the Bell CFS Disability Scale, the scale most ME/CFS clinicians and patients use. Pick whichever description feels closest most days.",
-      "100": "100 — No symptoms at rest, no symptoms with exercise, normal overall activity, able to work full-time",
-      "90": "90 — No symptoms at rest, mild symptoms with activity, normal overall activity, able to work full-time",
-      "80": "80 — Mild symptoms at rest, symptoms worsened by exertion, minimal activity restriction for exertion only",
-      "70": "70 — Mild symptoms at rest, some daily activity limitation, functions close to 90% of expected",
-      "60": "60 — Mild to moderate symptoms at rest, daily activity limitation, functions 70-90%, can't work full-time in physical jobs",
-      "50": "50 — Moderate symptoms at rest, moderate to severe with exercise, overall activity level 70% of expected",
-      "40": "40 — Moderate symptoms at rest, moderate to severe with exercise, overall activity level 50-70% of expected",
-      "30": "30 — Moderate to severe symptoms at rest, severe with any exercise, overall activity reduced to 50% of expected",
-      "20": "20 — Moderate to severe symptoms at rest, unable to do strenuous activity, overall activity 30-50% of expected",
-      "10": "10 — Severe symptoms at rest, bedridden most of the time, no travel outside the house",
-      "0": "0 — Severe symptoms continuously, bedridden constantly, unable to care for self"
+      "100": "100: No symptoms at rest, no symptoms with exercise, normal overall activity, able to work full-time",
+      "90": "90: No symptoms at rest, mild symptoms with activity, normal overall activity, able to work full-time",
+      "80": "80: Mild symptoms at rest, symptoms worsened by exertion, minimal activity restriction for exertion only",
+      "70": "70: Mild symptoms at rest, some daily activity limitation, functions close to 90% of expected",
+      "60": "60: Mild to moderate symptoms at rest, daily activity limitation, functions 70-90%, can't work full-time in physical jobs",
+      "50": "50: Moderate symptoms at rest, moderate to severe with exercise, overall activity level 70% of expected",
+      "40": "40: Moderate symptoms at rest, moderate to severe with exercise, overall activity level 50-70% of expected",
+      "30": "30: Moderate to severe symptoms at rest, severe with any exercise, overall activity reduced to 50% of expected",
+      "20": "20: Moderate to severe symptoms at rest, unable to do strenuous activity, overall activity 30-50% of expected",
+      "10": "10: Severe symptoms at rest, bedridden most of the time, no travel outside the house",
+      "0": "0: Severe symptoms continuously, bedridden constantly, unable to care for self"
     },
     "tour": {
       "skip": "Skip",
@@ -61,9 +61,9 @@
       "today_title": "Today",
       "today_body": "Your dashboard. See today's stats, your streak, and your energy at a glance.",
       "pace_title": "Pace",
-      "pace_body": "Your daily check-in: how you're feeling, plus your energy envelope — available energy vs. spent, the core of pacing.",
+      "pace_body": "Your daily check-in: how you're feeling, plus your energy envelope, available energy vs spent, the core of pacing.",
       "crashes_title": "Crashes",
-      "crashes_body": "When PEM hits. Log severity and symptoms, and link it back to what likely caused it — PEM often shows up 24 to 72 hours after exertion, not right away.",
+      "crashes_body": "When PEM hits. Log severity and symptoms, and link it back to what likely caused it. PEM often shows up 24 to 72 hours after exertion, not right away.",
       "insights_title": "Insights",
       "insights_body": "The evidence. AI-generated patterns, the DSQ-SF assessment, and reports you can bring to a doctor."
     },
@@ -77,9 +77,9 @@
     },
     "age_range": {
       "under_25": "Under 25",
-      "25_35": "25–35",
-      "35_45": "35–45",
-      "45_55": "45–55",
+      "25_35": "25-35",
+      "35_45": "35-45",
+      "45_55": "45-55",
       "55_plus": "55+"
     },
     "biological_sex": {
@@ -98,9 +98,9 @@
     "diagnosis_years": {
       "not_diagnosed": "Not yet diagnosed",
       "under_1": "Under 1 year",
-      "1_3": "1–3 years",
-      "3_5": "3–5 years",
-      "5_10": "5–10 years",
+      "1_3": "1-3 years",
+      "3_5": "3-5 years",
+      "5_10": "5-10 years",
       "10_plus": "10+ years"
     },
     "pem_duration_typical": {
@@ -159,7 +159,7 @@
   },
   "tracker": {
     "bell_score_today": "Functional level today",
-    "bell_score_hint": "Bell CFS Disability Scale — 100 is normal function, 0 is bedridden",
+    "bell_score_hint": "Bell CFS Disability Scale. 100 is normal function, 0 is bedridden.",
     "fatigue_score": "Fatigue",
     "fatigue_score_hint": "0 = none, 10 = as bad as it gets",
     "cognitive_dysfunction_score": "Cognitive dysfunction",
@@ -189,7 +189,11 @@
     "already_logged_title": "Logged today",
     "already_logged_subtitle": "You can edit today's entry any time.",
     "edit_today": "Edit today's entry",
-    "saved_success": "Saved"
+    "saved_success": "Saved",
+    "bell_score_info_title": "Functional level vs energy envelope",
+    "bell_score_info_message": "This is the Bell CFS Disability Scale, a snapshot of your overall function right now (100 is normal, 0 is bedridden). It's different from the energy envelope above, which tracks energy available versus energy spent today, not your overall functional capacity.",
+    "fatigue_score_info_title": "Fatigue vs energy envelope",
+    "fatigue_score_info_message": "This is how tired you feel right now, on its own scale. It's different from the energy envelope above, which tracks energy available versus spent, not how tired you feel. You can be fatigued without having overspent your envelope, or vice versa."
   },
   "pace": {
     "title": "Today's energy envelope",
@@ -213,7 +217,8 @@
     "add": "Add",
     "todays_exertion": "Today's exertion",
     "no_exertion_logged": "Nothing logged yet today.",
-    "remove": "Remove"
+    "remove": "Remove",
+    "envelope_info": "Leonard Jason's Energy Envelope method. Available is roughly how much energy you have today before symptoms worsen. Spent is how much you actually used. Staying within your envelope (spent at or under available) is the core pacing strategy for avoiding a crash. It's not the same as your functional level or fatigue below: you can feel very fatigued on a day you haven't overspent your envelope, or have a good functional level but overspend it anyway."
   },
   "dashboard": {
     "greeting": "Today",
@@ -273,7 +278,7 @@
     "generating": "Analysing your data...",
     "not_enough_data": "Log a few more days to get an insight.",
     "dsq_sf_card_title": "DSQ-SF Assessment",
-    "dsq_sf_card_body": "The DePaul Symptom Questionnaire — Short Form, the validated ME/CFS research instrument.",
+    "dsq_sf_card_body": "The DePaul Symptom Questionnaire, Short Form, the validated ME/CFS research instrument.",
     "dsq_sf_last_taken": "Last taken {{date}}",
     "dsq_sf_never_taken": "Never taken",
     "take_assessment": "Take assessment",
@@ -302,7 +307,7 @@
     "item_flu_like_symptoms": "Flu-like symptoms",
     "item_sensory_chemical_reaction": "Some smells, foods, medications, or chemicals make you feel sick",
     "save": "Save assessment",
-    "attribution": "DePaul Symptom Questionnaire — Short Form, developed by Leonard A. Jason, PhD, DePaul University."
+    "attribution": "DePaul Symptom Questionnaire, Short Form, developed by Leonard A. Jason, PhD, DePaul University."
   },
   "notifications": {
     "daily_checkin_title": "Time for today's check-in",

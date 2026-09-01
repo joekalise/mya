@@ -307,3 +307,8 @@ update_banner.update_btn
 dashboard.todays_log
 dashboard.edit
 dashboard.meds
+tracker.bell_score_info_title
+tracker.bell_score_info_message
+tracker.fatigue_score_info_title
+tracker.fatigue_score_info_message
+pace.envelope_info
