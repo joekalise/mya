@@ -5,7 +5,7 @@ import React, {
   useState,
   useCallback,
 } from 'react';
-import { Platform, Linking } from 'react-native';
+import { Platform, Linking, Alert } from 'react-native';
 import { Session, User } from '@supabase/supabase-js';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as AuthSession from 'expo-auth-session';
@@ -161,6 +161,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (error) throw error;
     if (!data.url) throw new Error('No OAuth URL returned');
+
+    // TEMPORARY DIAGNOSTIC — remove once Google sign-in redirect issue is resolved.
+    Alert.alert(
+      'Debug: Google sign-in',
+      `env URL: ${process.env.EXPO_PUBLIC_SUPABASE_URL}\n\nredirectUrl: ${redirectUrl}\n\ndata.url: ${data.url}`
+    );
 
     const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
 
