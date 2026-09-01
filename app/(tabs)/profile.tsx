@@ -11,7 +11,10 @@ import {
   Modal,
   ActivityIndicator,
   Alert,
+  Platform,
+  KeyboardAvoidingView,
   useColorScheme,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -25,6 +28,8 @@ import { FontSize, Spacing, BorderRadius, FontFamily } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/contexts/ProfileContext';
 import { useHealthData } from '@/hooks/useHealthData';
+import { useMedications } from '@/hooks/useMedications';
+import { useMedicationTracking } from '@/hooks/useMedicationTracking';
 import { deleteAllUserData } from '@/services/database';
 import { requestNotificationPermissions, scheduleDailyCheckIn, cancelNotification } from '@/services/notifications';
 import {
@@ -39,6 +44,7 @@ import {
   Comorbidity,
   Medication,
   LifestyleChallenge,
+  MedicationReminder,
 } from '@/types';
 
 const AGE_RANGES: AgeRange[] = ['under_25', '25_35', '35_45', '45_55', '55_plus'];
@@ -274,6 +280,256 @@ function ProfileEditModal({ visible, onClose, isDark, initial, onSave }: Profile
   );
 }
 
+// ─── AddMedicationModal ─────────────────────────────────────────────────────────
+
+interface AddMedicationModalProps {
+  visible: boolean;
+  onClose: () => void;
+  onSave: (med: Omit<MedicationReminder, 'id' | 'user_id'>) => Promise<void>;
+  onUpdate?: (id: string, updates: Partial<MedicationReminder>) => Promise<void>;
+  onOpenEditProfile?: () => void;
+  editingMed?: MedicationReminder | null;
+  isDark: boolean;
+  profileMeds?: Medication[];
+}
+
+const FREQUENCIES: MedicationReminder['frequency'][] = ['daily', 'weekly', 'fortnightly', 'monthly'];
+
+function AddMedicationModal({ visible, onClose, onSave, onUpdate, onOpenEditProfile, editingMed, isDark, profileMeds }: AddMedicationModalProps) {
+  const { height: screenHeight } = useWindowDimensions();
+  const { top: topInset } = useSafeAreaInsets();
+  const { t } = useTranslation();
+  const [name, setName] = useState('');
+  const [dose, setDose] = useState('');
+  const [frequency, setFrequency] = useState<MedicationReminder['frequency']>('daily');
+  const [reminderTime, setReminderTime] = useState('08:00');
+  const [asNeeded, setAsNeeded] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const isEditing = !!editingMed;
+
+  const cardBg = isDark ? Colors.surfaceDark : Colors.surface;
+  const cardBorder = isDark ? Colors.borderDark : Colors.border;
+  const textPrimary = isDark ? Colors.textPrimaryDark : Colors.textPrimary;
+  const textSecondary = isDark ? Colors.textSecondaryDark : Colors.textSecondary;
+  const inputBg = isDark ? Colors.backgroundDark : Colors.background;
+
+  function reset() {
+    setName('');
+    setDose('');
+    setFrequency('daily');
+    setReminderTime('08:00');
+    setAsNeeded(false);
+  }
+
+  useEffect(() => {
+    if (visible && editingMed) {
+      setName(editingMed.name);
+      setDose(editingMed.dose ?? '');
+      setFrequency(editingMed.frequency);
+      setReminderTime(editingMed.reminder_time);
+      setAsNeeded(editingMed.as_needed ?? false);
+    } else if (visible && !editingMed) {
+      reset();
+    }
+  }, [visible, editingMed]);
+
+  async function handleSave() {
+    if (!name.trim()) {
+      Alert.alert('', t('profile.error_med_name'));
+      return;
+    }
+    setIsSaving(true);
+    try {
+      if (isEditing && editingMed && onUpdate) {
+        await onUpdate(editingMed.id!, {
+          name: name.trim(),
+          dose: dose.trim(),
+          frequency,
+          reminder_time: reminderTime,
+          as_needed: asNeeded,
+        });
+      } else {
+        await onSave({
+          name: name.trim(),
+          dose: dose.trim(),
+          frequency,
+          reminder_time: reminderTime,
+          as_needed: asNeeded,
+          active: true,
+        });
+      }
+      reset();
+      onClose();
+    } catch (err) {
+      console.error('Add medication error:', err);
+      Alert.alert(t('common.error'), t('profile.error_save'));
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  function handleClose() {
+    reset();
+    onClose();
+  }
+
+  const freqLabels: Record<MedicationReminder['frequency'], string> = {
+    daily: t('profile.medications.daily'),
+    weekly: t('profile.medications.weekly'),
+    fortnightly: t('profile.medications.fortnightly'),
+    monthly: t('profile.medications.monthly'),
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.medModalOverlay}>
+        <View style={[styles.medModalContainer, { backgroundColor: cardBg, borderColor: cardBorder, maxHeight: screenHeight - topInset - Spacing.md }]}>
+          <Text style={[styles.medModalTitle, { color: textPrimary }]}>
+            {isEditing ? t('profile.medications.edit_title') : t('profile.medications.add_title')}
+          </Text>
+          <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+
+            {!isEditing && (
+              <View style={{ marginBottom: Spacing.md }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.xs, marginTop: Spacing.sm }}>
+                  <Text style={[styles.editFieldLabel, { color: textSecondary, marginBottom: 0, marginTop: 0 }]}>{t('profile.medications.from_your_treatment')}</Text>
+                  {onOpenEditProfile && (
+                    <TouchableOpacity onPress={() => { handleClose(); onOpenEditProfile(); }} activeOpacity={0.8}>
+                      <Text style={{ fontSize: FontSize.xs, color: Colors.primary, fontWeight: '600', fontFamily: FontFamily.semiBold }}>{t('profile.medications.edit_treatment_link')}</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                {profileMeds && profileMeds.filter((m) => m !== 'no_medication').length > 0 ? (
+                  <>
+                    <View style={styles.medChipsRow}>
+                      {profileMeds.filter((m) => m !== 'no_medication').map((med) => {
+                        const label = t(`onboarding.medications.${med}`);
+                        return (
+                          <TouchableOpacity
+                            key={med}
+                            onPress={() => setName(label)}
+                            activeOpacity={0.8}
+                            style={[styles.medChip, { backgroundColor: name === label ? Colors.primary : inputBg, borderColor: name === label ? Colors.primary : cardBorder }]}
+                          >
+                            <Text style={[styles.medChipText, { color: name === label ? '#FFFFFF' : textSecondary }]}>{label}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                    <Text style={[styles.medHelperText, { color: textSecondary, marginBottom: 0, marginTop: 4 }]}>{t('profile.medications.tap_to_fill')}</Text>
+                  </>
+                ) : (
+                  <Text style={[styles.medHelperText, { color: textSecondary, marginBottom: 0 }]}>{t('profile.medications.no_treatment_yet')}</Text>
+                )}
+              </View>
+            )}
+
+            <Text style={[styles.editFieldLabel, { color: textSecondary }]}>{t('profile.medications.name')}</Text>
+            <TextInput
+              style={[styles.medTextInput, { backgroundColor: inputBg, borderColor: cardBorder, color: textPrimary }]}
+              placeholder={t('profile.medications.name_placeholder')}
+              placeholderTextColor={textSecondary}
+              value={name}
+              onChangeText={setName}
+            />
+
+            <Text style={[styles.editFieldLabel, { color: textSecondary }]}>{t('profile.medications.dose')}</Text>
+            <TextInput
+              style={[styles.medTextInput, { backgroundColor: inputBg, borderColor: cardBorder, color: textPrimary }]}
+              placeholder={t('profile.medications.dose_placeholder')}
+              placeholderTextColor={textSecondary}
+              value={dose}
+              onChangeText={setDose}
+            />
+
+            <Text style={[styles.editFieldLabel, { color: textSecondary }]}>{t('profile.medications.frequency')}</Text>
+            <View style={styles.medChipsRow}>
+              {FREQUENCIES.map((freq) => (
+                <TouchableOpacity
+                  key={freq}
+                  onPress={() => { setFrequency(freq); setAsNeeded(false); }}
+                  activeOpacity={0.8}
+                  style={[styles.medChip, { backgroundColor: !asNeeded && frequency === freq ? Colors.primary : inputBg, borderColor: !asNeeded && frequency === freq ? Colors.primary : cardBorder }]}
+                >
+                  <Text style={[styles.medChipText, { color: !asNeeded && frequency === freq ? '#FFFFFF' : textSecondary }]}>{freqLabels[freq]}</Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                onPress={() => setAsNeeded(true)}
+                activeOpacity={0.8}
+                style={[styles.medChip, { backgroundColor: asNeeded ? Colors.primary : inputBg, borderColor: asNeeded ? Colors.primary : cardBorder }]}
+              >
+                <Text style={[styles.medChipText, { color: asNeeded ? '#FFFFFF' : textSecondary }]}>{t('profile.medications.as_needed')}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {!asNeeded && (
+              <>
+                <Text style={[styles.editFieldLabel, { color: textSecondary }]}>{t('profile.medications.reminder_time')}</Text>
+                {Platform.OS === 'android' ? (
+                  (() => {
+                    const [hStr, mStr] = reminderTime.split(':');
+                    const hVal = parseInt(hStr, 10);
+                    const mVal = parseInt(mStr, 10);
+                    const adjustTime = (hDelta: number, mDelta: number) => {
+                      const newH = ((hVal + hDelta) + 24) % 24;
+                      const newM = ((mVal + mDelta) + 60) % 60;
+                      setReminderTime(`${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`);
+                    };
+                    return (
+                      <View style={styles.androidTimeRow}>
+                        <View style={styles.androidTimeCol}>
+                          <TouchableOpacity style={[styles.androidTimeBtn, { backgroundColor: inputBg, borderColor: cardBorder }]} onPress={() => adjustTime(1, 0)} activeOpacity={0.7}>
+                            <Text style={[styles.androidTimeArrow, { color: Colors.primary }]}>▲</Text>
+                          </TouchableOpacity>
+                          <Text style={[styles.androidTimeValue, { color: textPrimary }]}>{String(hVal).padStart(2, '0')}</Text>
+                          <TouchableOpacity style={[styles.androidTimeBtn, { backgroundColor: inputBg, borderColor: cardBorder }]} onPress={() => adjustTime(-1, 0)} activeOpacity={0.7}>
+                            <Text style={[styles.androidTimeArrow, { color: Colors.primary }]}>▼</Text>
+                          </TouchableOpacity>
+                        </View>
+                        <Text style={[styles.androidTimeColon, { color: textPrimary }]}>:</Text>
+                        <View style={styles.androidTimeCol}>
+                          <TouchableOpacity style={[styles.androidTimeBtn, { backgroundColor: inputBg, borderColor: cardBorder }]} onPress={() => adjustTime(0, 5)} activeOpacity={0.7}>
+                            <Text style={[styles.androidTimeArrow, { color: Colors.primary }]}>▲</Text>
+                          </TouchableOpacity>
+                          <Text style={[styles.androidTimeValue, { color: textPrimary }]}>{String(mVal).padStart(2, '0')}</Text>
+                          <TouchableOpacity style={[styles.androidTimeBtn, { backgroundColor: inputBg, borderColor: cardBorder }]} onPress={() => adjustTime(0, -5)} activeOpacity={0.7}>
+                            <Text style={[styles.androidTimeArrow, { color: Colors.primary }]}>▼</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    );
+                  })()
+                ) : (
+                  <DateTimePicker
+                    value={timeToDate(reminderTime)}
+                    mode="time"
+                    display="spinner"
+                    onChange={(_event, date) => { if (date) setReminderTime(dateToTime(date)); }}
+                    textColor={textPrimary}
+                    style={{ width: '100%', height: 150 }}
+                  />
+                )}
+              </>
+            )}
+
+          </ScrollView>
+
+          <View style={styles.medModalActions}>
+            <TouchableOpacity onPress={handleClose} style={[styles.medModalCancelBtn, { borderColor: cardBorder }]} activeOpacity={0.8}>
+              <Text style={[styles.medModalCancelText, { color: textSecondary }]}>{t('common.cancel')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleSave} style={[styles.modalSaveBtn, { flex: 1, opacity: isSaving ? 0.6 : 1 }]} disabled={isSaving} activeOpacity={0.8}>
+              {isSaving ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.modalSaveText}>{isEditing ? t('common.save_changes') : t('profile.medications.save')}</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
 // ─── SummaryRow ─────────────────────────────────────────────────────────────────
 
 function SummaryRow({ label, value, isDark }: { label: string; value: string; isDark: boolean }) {
@@ -293,12 +549,46 @@ export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const { profile, saveProfile } = useProfile();
   const { isAvailable: healthAvailable, isConnected: healthConnected, connect: connectHealth, disconnect: disconnectHealth } = useHealthData();
+  const { medications, isLoading: medsLoading, addMedication, updateMedication, deleteMedication } = useMedications();
+  const { tracks: tracksMedication, setTracks: setTracksMedication } = useMedicationTracking();
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isTogglingHealth, setIsTogglingHealth] = useState(false);
+  const [showAddMed, setShowAddMed] = useState(false);
+  const [editingMed, setEditingMed] = useState<MedicationReminder | null>(null);
+
+  const medicationDosesPerDay = profile?.medication_doses_per_day ?? 1;
+
+  const handleSetMedicationDosesPerDay = useCallback(async (value: number) => {
+    try {
+      await saveProfile({ medication_doses_per_day: value });
+    } catch (err) {
+      console.error('Update medication doses per day error:', err);
+      Alert.alert(t('common.error'), t('profile.error_save'));
+    }
+  }, [saveProfile, t]);
+
+  const handleDeleteMed = useCallback((id: string, name: string) => {
+    Alert.alert(name, t('profile.medications.remove_body'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('profile.medications.remove_btn'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteMedication(id);
+          } catch (err) {
+            console.error('Delete medication error:', err);
+          }
+        },
+      },
+    ]);
+  }, [deleteMedication, t]);
+
+  const freqLabel = (freq: MedicationReminder['frequency']): string => t(`profile.medications.${freq}`);
 
   const checkScheduled = useCallback(async () => {
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();
@@ -410,6 +700,68 @@ export default function ProfileScreen() {
         <View style={[styles.section, isDark && styles.sectionDark]}>
           <View style={styles.rowBetween}>
             <View style={styles.rowTextGroup}>
+              <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('profile.medications.section_title')}</Text>
+              <Text style={[styles.hint, isDark && styles.textSecDark]}>
+                {tracksMedication ? t('profile.medications.tracking_on') : t('profile.medications.tracking_off')}
+              </Text>
+            </View>
+            <Switch value={tracksMedication} onValueChange={setTracksMedication} trackColor={{ true: Colors.primary }} />
+          </View>
+
+          {tracksMedication && (
+            <View style={styles.rowBetween}>
+              <Text style={[styles.editFieldLabel, isDark && styles.textSecDark, { marginTop: 0 }]}>{t('profile.medications.doses_per_day')}</Text>
+              <View style={styles.medChipsRow}>
+                {[1, 2, 3].map((n) => (
+                  <TouchableOpacity
+                    key={n}
+                    onPress={() => handleSetMedicationDosesPerDay(n)}
+                    activeOpacity={0.8}
+                    style={[
+                      styles.medDoseChip,
+                      { backgroundColor: medicationDosesPerDay === n ? Colors.primary : 'transparent', borderColor: medicationDosesPerDay === n ? Colors.primary : (isDark ? Colors.borderDark : Colors.border) },
+                    ]}
+                  >
+                    <Text style={[styles.medChipText, { color: medicationDosesPerDay === n ? '#FFFFFF' : (isDark ? Colors.textSecondaryDark : Colors.textSecondary) }]}>{n}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {medsLoading ? (
+            <ActivityIndicator color={Colors.primary} style={{ marginVertical: Spacing.sm }} />
+          ) : (
+            medications.map((med) => (
+              <TouchableOpacity key={med.id} style={styles.medListRow} onPress={() => { setEditingMed(med); setShowAddMed(true); }} activeOpacity={0.7}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.medName, isDark && styles.textPrimaryDark]}>{med.name}</Text>
+                  <View style={styles.medMetaRow}>
+                    {med.dose ? <Text style={[styles.medDose, isDark && styles.textSecDark]}>{med.dose}</Text> : null}
+                    {med.as_needed ? (
+                      <Text style={[styles.medFreqBadge, { color: Colors.warning }]}>{t('profile.medications.as_needed')}</Text>
+                    ) : (
+                      <Text style={[styles.medFreqBadge, isDark && styles.textSecDark]}>{freqLabel(med.frequency)} · {med.reminder_time}</Text>
+                    )}
+                  </View>
+                </View>
+                <TouchableOpacity onPress={() => handleDeleteMed(med.id!, med.name)} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={styles.medDeleteIcon}>✕</Text>
+                </TouchableOpacity>
+              </TouchableOpacity>
+            ))
+          )}
+
+          {tracksMedication && (
+            <TouchableOpacity onPress={() => { setEditingMed(null); setShowAddMed(true); }} activeOpacity={0.7}>
+              <Text style={styles.editLink}>{t('profile.medications.add_btn')}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <View style={[styles.section, isDark && styles.sectionDark]}>
+          <View style={styles.rowBetween}>
+            <View style={styles.rowTextGroup}>
               <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('profile.section_reminders')}</Text>
               <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('profile.reminder_hint')}</Text>
             </View>
@@ -478,6 +830,17 @@ export default function ProfileScreen() {
         }}
         onSave={async (updates) => { await saveProfile(updates); }}
       />
+
+      <AddMedicationModal
+        visible={showAddMed}
+        onClose={() => { setShowAddMed(false); setEditingMed(null); }}
+        onSave={addMedication}
+        onUpdate={updateMedication}
+        onOpenEditProfile={() => setShowEditModal(true)}
+        editingMed={editingMed}
+        isDark={isDark}
+        profileMeds={profile?.medications}
+      />
     </SafeAreaView>
   );
 }
@@ -522,4 +885,31 @@ const styles = StyleSheet.create({
   aiContextInput: { borderWidth: 1, borderRadius: BorderRadius.md, padding: Spacing.sm, fontSize: FontSize.sm, minHeight: 90, textAlignVertical: 'top' },
   modalSaveBtn: { backgroundColor: Colors.primary, borderRadius: BorderRadius.md, paddingVertical: Spacing.md, alignItems: 'center' },
   modalSaveText: { color: '#FFFFFF', fontSize: FontSize.lg, fontWeight: '600', fontFamily: FontFamily.semiBold },
+
+  medListRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.sm },
+  medName: { fontSize: FontSize.sm, fontWeight: '700', fontFamily: FontFamily.bold, color: Colors.textPrimary },
+  medMetaRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: 2 },
+  medDose: { fontSize: FontSize.xs, color: Colors.textSecondary },
+  medFreqBadge: { fontSize: FontSize.xs, color: Colors.textSecondary },
+  medDeleteIcon: { fontSize: FontSize.md, color: Colors.error },
+  medDoseChip: { width: 32, height: 32, borderRadius: 16, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+
+  medModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  medModalContainer: { borderTopLeftRadius: BorderRadius.xl, borderTopRightRadius: BorderRadius.xl, borderWidth: 1, padding: Spacing.lg },
+  medModalTitle: { fontSize: FontSize.lg, fontWeight: '800', fontFamily: FontFamily.extraBold, marginBottom: Spacing.md },
+  medChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs, marginTop: Spacing.xs },
+  medChip: { paddingVertical: 8, paddingHorizontal: Spacing.sm, borderRadius: BorderRadius.full, borderWidth: 1.5 },
+  medChipText: { fontSize: FontSize.xs, fontWeight: '600', fontFamily: FontFamily.semiBold },
+  medHelperText: { fontSize: FontSize.xs },
+  medTextInput: { borderWidth: 1, borderRadius: BorderRadius.md, padding: Spacing.sm, fontSize: FontSize.sm, marginTop: Spacing.xs, marginBottom: Spacing.sm },
+  medModalActions: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md },
+  medModalCancelBtn: { paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, borderRadius: BorderRadius.md, borderWidth: 1, alignItems: 'center' },
+  medModalCancelText: { fontSize: FontSize.md, fontWeight: '600', fontFamily: FontFamily.semiBold },
+
+  androidTimeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.md, marginTop: Spacing.sm },
+  androidTimeCol: { alignItems: 'center', gap: Spacing.xs },
+  androidTimeBtn: { width: 44, height: 36, borderRadius: BorderRadius.sm, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  androidTimeArrow: { fontSize: FontSize.sm, fontWeight: '700' },
+  androidTimeValue: { fontSize: FontSize.xxl, fontWeight: '800', fontFamily: FontFamily.extraBold },
+  androidTimeColon: { fontSize: FontSize.xxl, fontWeight: '800', fontFamily: FontFamily.extraBold },
 });

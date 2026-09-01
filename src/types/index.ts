@@ -67,6 +67,7 @@ export interface UserProfile {
   primary_symptoms: PrimarySymptom[];
   comorbidities: Comorbidity[];
   medications: Medication[];
+  medication_doses_per_day: number;
   challenges: LifestyleChallenge[];
   notification_time: string;
   ai_context: string;
@@ -93,6 +94,9 @@ export interface DailyLog {
   flu_like_symptoms: boolean | null;
   sensory_chemical_reaction: boolean | null;
   medications_taken: MedsTaken | null;
+  medications_taken_dose_1: MedsTaken | null;
+  medications_taken_dose_2: MedsTaken | null;
+  medications_taken_dose_3: MedsTaken | null;
   notes: string;
 }
 
@@ -196,6 +200,7 @@ export interface MedicationReminder {
   frequency: 'daily' | 'weekly' | 'fortnightly' | 'monthly';
   reminder_time: string;
   active: boolean;
+  as_needed?: boolean;
 }
 
 export interface Nudge {

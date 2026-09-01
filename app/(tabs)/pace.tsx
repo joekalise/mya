@@ -23,25 +23,37 @@ import { Colors } from '@/constants/colors';
 import { FontSize, Spacing, BorderRadius, FontFamily } from '@/constants/theme';
 import { useDailyLog } from '@/hooks/useDailyLog';
 import { useEnergyEnvelope } from '@/hooks/useEnergyEnvelope';
+import { useMedicationTracking } from '@/hooks/useMedicationTracking';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/contexts/ProfileContext';
 import { MedsTaken, ExertionType } from '@/types';
 
 function todayDateLabel(): string {
   return new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
+function deriveMedicationsTaken(doses: MedsTaken[]): MedsTaken {
+  if (doses.every((d) => d === 'yes')) return 'yes';
+  if (doses.every((d) => d === 'no')) return 'no';
+  return 'partial';
+}
+
 const EXERTION_TYPES: ExertionType[] = ['physical', 'cognitive', 'emotional', 'social'];
 const DURATION_PRESETS = [15, 30, 45, 60, 90];
+const MEDS_OPTIONS: MedsTaken[] = ['yes', 'partial', 'no'];
 
 export default function PaceScreen() {
   const { t } = useTranslation();
   const isDark = useColorScheme() === 'dark';
   const { user } = useAuth();
+  const { profile } = useProfile();
   const { todayLog, todayLogged, streak, isLoading: logLoading, error, saveLog, refresh: refreshLog } = useDailyLog();
   const {
     available, spent, events, isLoading: envelopeLoading,
     saveEnvelope, addEvent, removeEvent, refresh: refreshEnvelope,
   } = useEnergyEnvelope();
+  const { tracks: tracksMedication } = useMedicationTracking();
+  const medicationDosesPerDay = profile?.medication_doses_per_day ?? 1;
 
   useFocusEffect(useCallback(() => { refreshLog(); refreshEnvelope(); }, [refreshLog, refreshEnvelope]));
 
@@ -55,6 +67,9 @@ export default function PaceScreen() {
   const [wokeRested, setWokeRested] = useState<boolean | null>(null);
   const [pemToday, setPemToday] = useState(false);
   const [medsTaken, setMedsTaken] = useState<MedsTaken>('yes');
+  const [medsTakenDose1, setMedsTakenDose1] = useState<MedsTaken>('yes');
+  const [medsTakenDose2, setMedsTakenDose2] = useState<MedsTaken>('yes');
+  const [medsTakenDose3, setMedsTakenDose3] = useState<MedsTaken>('yes');
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -73,6 +88,9 @@ export default function PaceScreen() {
       setWokeRested(todayLog.woke_rested ?? null);
       setPemToday(todayLog.pem_today);
       setMedsTaken(todayLog.medications_taken ?? 'yes');
+      setMedsTakenDose1(todayLog.medications_taken_dose_1 ?? 'yes');
+      setMedsTakenDose2(todayLog.medications_taken_dose_2 ?? 'yes');
+      setMedsTakenDose3(todayLog.medications_taken_dose_3 ?? 'yes');
       setNotes(todayLog.notes ?? '');
     }
     setEditing(false);
@@ -106,7 +124,12 @@ export default function PaceScreen() {
           temperature_dysregulation: null,
           flu_like_symptoms: null,
           sensory_chemical_reaction: null,
-          medications_taken: medsTaken,
+          medications_taken: medicationDosesPerDay > 1
+            ? deriveMedicationsTaken([medsTakenDose1, medsTakenDose2, medsTakenDose3].slice(0, medicationDosesPerDay))
+            : medsTaken,
+          medications_taken_dose_1: medicationDosesPerDay > 1 ? medsTakenDose1 : null,
+          medications_taken_dose_2: medicationDosesPerDay > 1 ? medsTakenDose2 : null,
+          medications_taken_dose_3: medicationDosesPerDay > 2 ? medsTakenDose3 : null,
           notes,
         }),
         saveEnvelope(energyAvailable, energySpent),
@@ -256,26 +279,63 @@ export default function PaceScreen() {
               <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('tracker.woke_rested_hint')}</Text>
             </View>
 
-            <View style={[styles.section, isDark && styles.sectionDark]}>
-              <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('tracker.medications_taken')}</Text>
-              <View style={styles.medsRow}>
-                {(['yes', 'partial', 'no'] as MedsTaken[]).map((opt) => {
-                  const selected = medsTaken === opt;
-                  return (
-                    <TouchableOpacity
-                      key={opt}
-                      onPress={() => setMedsTaken(opt)}
-                      style={[styles.medsButton, isDark && styles.medsButtonDark, selected && { borderColor: Colors.primary, backgroundColor: Colors.primaryLight }]}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[styles.optionLabel, isDark && styles.textSecDark, selected && { color: Colors.primaryDark, fontWeight: '700', fontFamily: FontFamily.bold }]}>
-                        {t(`tracker.medications_${opt}`)}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+            {tracksMedication && (
+              <View style={[styles.section, isDark && styles.sectionDark]}>
+                <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('tracker.medications_taken')}</Text>
+                {medicationDosesPerDay > 1 ? (
+                  (medicationDosesPerDay === 3
+                    ? [
+                        { label: t('tracker.medications_morning'), value: medsTakenDose1, onSelect: setMedsTakenDose1 },
+                        { label: t('tracker.medications_afternoon'), value: medsTakenDose2, onSelect: setMedsTakenDose2 },
+                        { label: t('tracker.medications_evening'), value: medsTakenDose3, onSelect: setMedsTakenDose3 },
+                      ]
+                    : [
+                        { label: t('tracker.medications_morning'), value: medsTakenDose1, onSelect: setMedsTakenDose1 },
+                        { label: t('tracker.medications_evening'), value: medsTakenDose2, onSelect: setMedsTakenDose2 },
+                      ]
+                  ).map((dose, i) => (
+                    <View key={dose.label} style={i > 0 ? { marginTop: Spacing.md } : undefined}>
+                      <Text style={[styles.fieldLabel, isDark && styles.textSecDark]}>{dose.label}</Text>
+                      <View style={styles.medsRow}>
+                        {MEDS_OPTIONS.map((opt) => {
+                          const selected = dose.value === opt;
+                          return (
+                            <TouchableOpacity
+                              key={opt}
+                              onPress={() => dose.onSelect(opt)}
+                              style={[styles.medsButton, isDark && styles.medsButtonDark, selected && { borderColor: Colors.primary, backgroundColor: Colors.primaryLight }]}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={[styles.optionLabel, isDark && styles.textSecDark, selected && { color: Colors.primaryDark, fontWeight: '700', fontFamily: FontFamily.bold }]}>
+                                {t(`tracker.medications_${opt}`)}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  ))
+                ) : (
+                  <View style={styles.medsRow}>
+                    {MEDS_OPTIONS.map((opt) => {
+                      const selected = medsTaken === opt;
+                      return (
+                        <TouchableOpacity
+                          key={opt}
+                          onPress={() => setMedsTaken(opt)}
+                          style={[styles.medsButton, isDark && styles.medsButtonDark, selected && { borderColor: Colors.primary, backgroundColor: Colors.primaryLight }]}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.optionLabel, isDark && styles.textSecDark, selected && { color: Colors.primaryDark, fontWeight: '700', fontFamily: FontFamily.bold }]}>
+                            {t(`tracker.medications_${opt}`)}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
               </View>
-            </View>
+            )}
 
             <View style={[styles.section, isDark && styles.sectionDark]}>
               <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('tracker.notes')}</Text>

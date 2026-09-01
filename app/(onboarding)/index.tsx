@@ -21,9 +21,9 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { Colors } from '@/constants/colors';
 import { Spacing, FontSize, FontFamily, BorderRadius } from '@/constants/theme';
 import { useProfile } from '@/contexts/ProfileContext';
-import { PrimarySymptom, PemOnsetDelay } from '@/types';
+import { PrimarySymptom, PemOnsetDelay, Medication } from '@/types';
 
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 4;
 
 const TOUR_SLIDES = [
   { icon: 'today-outline' as const, titleKey: 'onboarding.tour.today_title', bodyKey: 'onboarding.tour.today_body' },
@@ -49,6 +49,8 @@ const BELL_SCORES = [100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0];
 
 const PEM_ONSET_DELAYS: PemOnsetDelay[] = ['same_day', 'next_day', '24_72h', 'variable'];
 
+const MEDICATIONS: Medication[] = ['low_dose_naltrexone', 'beta_blockers', 'antihistamines_h1_h2', 'stimulants', 'antidepressants', 'anticoagulants', 'no_medication', 'other'];
+
 function toggleMulti<T>(arr: T[], val: T): T[] {
   return arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val];
 }
@@ -62,6 +64,7 @@ export default function OnboardingScreen() {
   const [primarySymptoms, setPrimarySymptoms] = useState<PrimarySymptom[]>([]);
   const [bellScore, setBellScore] = useState<number | null>(null);
   const [pemOnsetDelay, setPemOnsetDelay] = useState<PemOnsetDelay | null>(null);
+  const [medications, setMedications] = useState<Medication[]>([]);
   const [isCompleting, setIsCompleting] = useState(false);
   const [showTour, setShowTour] = useState(false);
   const [tourStep, setTourStep] = useState(0);
@@ -74,10 +77,12 @@ export default function OnboardingScreen() {
         return bellScore !== null;
       case 3:
         return pemOnsetDelay !== null;
+      case 4:
+        return medications.length > 0;
       default:
         return false;
     }
-  }, [currentStep, primarySymptoms, bellScore, pemOnsetDelay]);
+  }, [currentStep, primarySymptoms, bellScore, pemOnsetDelay, medications]);
 
   const handleComplete = async () => {
     setIsCompleting(true);
@@ -86,6 +91,7 @@ export default function OnboardingScreen() {
         primary_symptoms: primarySymptoms,
         bell_score_baseline: bellScore,
         pem_onset_delay: pemOnsetDelay,
+        medications,
         notification_time: '20:00',
         ai_context: '',
         onboarding_complete: true,
@@ -163,12 +169,14 @@ export default function OnboardingScreen() {
     1: t('onboarding.primary_symptoms.title'),
     2: t('onboarding.bell_score_baseline.title'),
     3: t('onboarding.pem_onset_delay.title'),
+    4: t('onboarding.medications.title'),
   } as Record<number, string>)[currentStep] ?? '';
 
   const stepSubtitle = ({
     1: t('onboarding.primary_symptoms.subtitle'),
     2: t('onboarding.bell_score_baseline.subtitle'),
     3: t('onboarding.pem_onset_delay.subtitle'),
+    4: t('onboarding.medications.subtitle'),
   } as Record<number, string>)[currentStep] ?? '';
 
   const renderStepContent = () => {
@@ -208,6 +216,19 @@ export default function OnboardingScreen() {
                 label={t(`onboarding.pem_onset_delay.${v}`)}
                 isSelected={pemOnsetDelay === v}
                 onPress={() => setPemOnsetDelay(v)}
+              />
+            ))}
+          </>
+        );
+      case 4:
+        return (
+          <>
+            {MEDICATIONS.map((v) => (
+              <MultiSelectCard
+                key={v}
+                label={t(`onboarding.medications.${v}`)}
+                isSelected={medications.includes(v)}
+                onPress={() => setMedications((arr) => toggleMulti(arr, v))}
               />
             ))}
           </>

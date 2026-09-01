@@ -137,7 +137,9 @@
       "antidepressants": "Antidepressants",
       "anticoagulants": "Anticoagulants",
       "no_medication": "No medication",
-      "other": "Other"
+      "other": "Other",
+      "title": "Are you currently taking any medications?",
+      "subtitle": "Select all that apply. You can add specific medications and reminders later from your profile."
     },
     "challenges": {
       "sleep": "Sleep",
@@ -193,7 +195,10 @@
     "bell_score_info_title": "Functional level vs energy envelope",
     "bell_score_info_message": "This is the Bell CFS Disability Scale, a snapshot of your overall function right now (100 is normal, 0 is bedridden). It's different from the energy envelope above, which tracks energy available versus energy spent today, not your overall functional capacity.",
     "fatigue_score_info_title": "Fatigue vs energy envelope",
-    "fatigue_score_info_message": "This is how tired you feel right now, on its own scale. It's different from the energy envelope above, which tracks energy available versus spent, not how tired you feel. You can be fatigued without having overspent your envelope, or vice versa."
+    "fatigue_score_info_message": "This is how tired you feel right now, on its own scale. It's different from the energy envelope above, which tracks energy available versus spent, not how tired you feel. You can be fatigued without having overspent your envelope, or vice versa.",
+    "medications_morning": "Morning",
+    "medications_afternoon": "Afternoon",
+    "medications_evening": "Evening"
   },
   "pace": {
     "title": "Today's energy envelope",
@@ -311,7 +316,9 @@
   },
   "notifications": {
     "daily_checkin_title": "Time for today's check-in",
-    "daily_checkin_body": "A quick log of how today went, plus your energy numbers."
+    "daily_checkin_body": "A quick log of how today went, plus your energy numbers.",
+    "medication_title": "Time for {{name}}",
+    "medication_body": "{{dose}} {{name}}"
   },
   "profile": {
     "section_your_profile": "Your profile",
@@ -354,7 +361,35 @@
     "notifications_denied_title": "Notifications disabled",
     "notifications_denied_body": "Enable notifications in Settings to get a daily reminder.",
     "error_save": "Could not save your profile. Please try again.",
-    "error_delete_account": "Could not delete your account. Please try again."
+    "error_delete_account": "Could not delete your account. Please try again.",
+    "medications": {
+      "section_title": "Medications",
+      "tracking_on": "Tracking is on. Today's log will ask if you took your medications.",
+      "tracking_off": "Tracking is off. Today's log won't ask about medications.",
+      "doses_per_day": "Times a day",
+      "add_btn": "Add a medication",
+      "add_title": "Add medication",
+      "edit_title": "Edit medication",
+      "name": "Name",
+      "name_placeholder": "e.g. Low-dose naltrexone",
+      "dose": "Dose",
+      "dose_placeholder": "e.g. 4.5mg",
+      "frequency": "Frequency",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "fortnightly": "Fortnightly",
+      "monthly": "Monthly",
+      "as_needed": "As needed",
+      "reminder_time": "Reminder time",
+      "from_your_treatment": "From your treatment",
+      "edit_treatment_link": "Edit",
+      "tap_to_fill": "Tap one to fill in the name.",
+      "no_treatment_yet": "You haven't added any medication categories yet. You can still add a named medication below.",
+      "save": "Add medication",
+      "remove_body": "Remove this medication and its reminder?",
+      "remove_btn": "Remove"
+    },
+    "error_med_name": "Please enter a medication name."
   },
   "update_banner": {
     "title": "Update available",

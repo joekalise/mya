@@ -1,5 +1,5 @@
 import { supabase } from '@/services/supabase';
-import { DailyLog, ExertionEvent, DailyEnvelope, Crash, DsqSfScore, HealthData } from '@/types';
+import { DailyLog, ExertionEvent, DailyEnvelope, Crash, DsqSfScore, HealthData, MedicationReminder } from '@/types';
 
 // ─── Daily Logs ─────────────────────────────────────────────────────────────
 
@@ -250,6 +250,69 @@ export async function getHealthDataRange(userId: string, days: number): Promise<
   } catch (err) {
     console.error('getHealthDataRange error:', err);
     return [];
+  }
+}
+
+// ─── Medications ────────────────────────────────────────────────────────────────
+
+export async function getMedications(userId: string): Promise<MedicationReminder[]> {
+  try {
+    const { data, error } = await supabase
+      .from('medications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return (data ?? []) as MedicationReminder[];
+  } catch (err) {
+    console.error('getMedications error:', err);
+    throw err;
+  }
+}
+
+export async function addMedication(
+  med: Omit<MedicationReminder, 'id'>
+): Promise<MedicationReminder> {
+  try {
+    const { data, error } = await supabase
+      .from('medications')
+      .insert(med)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as MedicationReminder;
+  } catch (err) {
+    console.error('addMedication error:', err);
+    throw err;
+  }
+}
+
+export async function updateMedication(
+  id: string,
+  updates: Partial<MedicationReminder>
+): Promise<MedicationReminder> {
+  try {
+    const { data, error } = await supabase
+      .from('medications')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as MedicationReminder;
+  } catch (err) {
+    console.error('updateMedication error:', err);
+    throw err;
+  }
+}
+
+export async function deleteMedication(id: string): Promise<void> {
+  try {
+    const { error } = await supabase.from('medications').delete().eq('id', id);
+    if (error) throw error;
+  } catch (err) {
+    console.error('deleteMedication error:', err);
+    throw err;
   }
 }
 
