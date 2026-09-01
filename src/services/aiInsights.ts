@@ -1,5 +1,5 @@
 import { supabase } from '@/services/supabase';
-import { DailyLog, ExertionEvent, Crash, UserProfile, HealthData, RecoverySnapshot } from '@/types';
+import { DailyLog, ExertionEvent, Crash, UserProfile, HealthData, RecoverySnapshot, WelcomeContent, PrimarySymptom, PemOnsetDelay, Medication } from '@/types';
 
 export interface WeeklyInsight {
   summary: string;
@@ -263,4 +263,100 @@ How to respond:
     console.error('sendChatMessage error:', err);
     throw new Error('AI chat is temporarily unavailable. Please try again in a moment.');
   }
+}
+
+// ─── generateWelcomeContent ───────────────────────────────────────────────────
+
+const SYMPTOM_LABELS: Record<PrimarySymptom, string> = {
+  fatigue: 'persistent fatigue',
+  pem: 'post-exertional malaise (PEM)',
+  unrefreshing_sleep: 'unrefreshing sleep',
+  cognitive_dysfunction: 'cognitive dysfunction / brain fog',
+  orthostatic_intolerance: 'orthostatic intolerance',
+  pain: 'pain',
+  sensory_sensitivity: 'sensory sensitivity',
+  temperature_dysregulation: 'temperature dysregulation',
+  immune_flulike: 'flu-like/immune symptoms',
+  gi_issues: 'gastrointestinal issues',
+};
+
+const PEM_ONSET_LABELS: Record<PemOnsetDelay, string> = {
+  same_day: 'same day as exertion',
+  next_day: 'the day after exertion',
+  '24_72h': '24 to 72 hours after exertion',
+  variable: 'variable timing after exertion',
+};
+
+const MEDICATION_LABELS: Record<Medication, string> = {
+  low_dose_naltrexone: 'low-dose naltrexone',
+  beta_blockers: 'beta blockers',
+  antihistamines_h1_h2: 'antihistamines (H1/H2)',
+  stimulants: 'stimulants',
+  antidepressants: 'antidepressants',
+  anticoagulants: 'anticoagulants',
+  no_medication: 'no medication',
+  other: 'other treatment',
+};
+
+function buildOnboardingPrompt(
+  data: {
+    primarySymptoms: PrimarySymptom[];
+    bellScore: number | null;
+    pemOnsetDelay: PemOnsetDelay | null;
+    medications: Medication[];
+  },
+  language?: string
+): string {
+  const langInstruction = language && language !== 'en-GB' ? `\nRespond in ${language}. Write all text content in ${language}, JSON keys must remain in English.` : '';
+
+  return `You are a warm, knowledgeable companion for someone living with ME/CFS.${langInstruction}
+
+Here is their profile:
+- Primary symptoms: ${data.primarySymptoms.map((s) => SYMPTOM_LABELS[s] ?? s).join(', ') || 'none specified'}
+- Baseline functional level (Bell CFS Disability Scale, 100 is normal function, 0 is bedridden): ${data.bellScore ?? 'unknown'}
+- Typical PEM (post-exertional malaise) onset delay: ${data.pemOnsetDelay ? PEM_ONSET_LABELS[data.pemOnsetDelay] : 'unknown'}
+- Current treatment: ${data.medications.map((m) => MEDICATION_LABELS[m] ?? m).join(', ') || 'none specified'}
+
+Please respond with a JSON object with exactly this structure:
+{
+  "welcome_message": "A warm, personal 2-3 sentence welcome that acknowledges what they're going through specifically. Make them feel understood and believed, not judged. Use 'you' and 'your'. Never use clinical language or anything alarming. Tone: like a knowledgeable friend who also has ME/CFS.",
+  "insights": [
+    "First ME/CFS-specific insight relevant to their profile, something genuinely useful they might not know. 1-2 sentences.",
+    "Second insight, different aspect of their profile. 1-2 sentences.",
+    "Third insight, practical and actionable. 1-2 sentences."
+  ],
+  "watch_summary": "1-2 sentences describing what Mya will specifically monitor for this person based on their profile. Be specific, for example PEM delay patterns, energy envelope overspend, HRV trend, sleep quality."
+}
+
+Rules:
+- Never say "you are at risk", "you will crash", or anything that sounds like a diagnosis
+- Always use language like "your data suggests", "might be worth", "consider"
+- Be warm, not clinical. Their symptoms are real, and this app exists to help them prove that to doctors and others who doubt them
+- Be specific to their actual profile, do not give generic ME/CFS advice
+- Key ME/CFS factors: post-exertional malaise and its delay, pacing within an energy envelope, unrefreshing sleep, cognitive dysfunction, orthostatic intolerance
+- Never use em dashes or en dashes anywhere in your response. Use a comma, period, or plain hyphen instead
+- The JSON must be valid and parseable`;
+}
+
+export async function generateWelcomeContent(
+  data: {
+    primarySymptoms: PrimarySymptom[];
+    bellScore: number | null;
+    pemOnsetDelay: PemOnsetDelay | null;
+    medications: Medication[];
+  },
+  language?: string
+): Promise<WelcomeContent> {
+  const prompt = buildOnboardingPrompt(data, language);
+
+  const text = await callClaude({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 1024,
+    messages: [{ role: 'user', content: prompt }],
+  });
+
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('No JSON found in Claude response');
+
+  return JSON.parse(jsonMatch[0]) as WelcomeContent;
 }

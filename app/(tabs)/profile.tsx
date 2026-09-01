@@ -34,6 +34,7 @@ import { useMedicationTracking } from '@/hooks/useMedicationTracking';
 import { useSubscription } from '@/hooks/useSubscription';
 import { PremiumModal } from '@/components/common/PremiumModal';
 import { deleteAllUserData } from '@/services/database';
+import { getAiConsent, setAiConsent } from '@/services/aiConsent';
 import { requestNotificationPermissions, scheduleDailyCheckIn, cancelNotification } from '@/services/notifications';
 import {
   AgeRange,
@@ -564,6 +565,11 @@ export default function ProfileScreen() {
   const [showAddMed, setShowAddMed] = useState(false);
   const [editingMed, setEditingMed] = useState<MedicationReminder | null>(null);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [aiConsented, setAiConsented] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    getAiConsent().then(setAiConsented);
+  }, []);
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
 
@@ -659,6 +665,11 @@ export default function ProfileScreen() {
     const timeString = dateToTime(selected);
     await saveProfile({ notification_time: timeString });
     if (notificationsEnabled) await scheduleDailyCheckIn(timeString);
+  };
+
+  const handleToggleAiConsent = async (value: boolean) => {
+    setAiConsented(value);
+    await setAiConsent(value);
   };
 
   const handleToggleHealth = async (value: boolean) => {
@@ -866,6 +877,18 @@ export default function ProfileScreen() {
                 ? <ActivityIndicator color={Colors.primary} />
                 : <Switch value={healthConnected} onValueChange={handleToggleHealth} trackColor={{ true: Colors.primary }} />
             )}
+          </View>
+        </View>
+
+        <View style={[styles.section, isDark && styles.sectionDark]}>
+          <View style={styles.rowBetween}>
+            <View style={styles.rowTextGroup}>
+              <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('profile.ai_data_sharing')}</Text>
+              <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('profile.ai_data_sharing_hint')}</Text>
+            </View>
+            {aiConsented === null
+              ? <ActivityIndicator color={Colors.primary} />
+              : <Switch value={aiConsented} onValueChange={handleToggleAiConsent} trackColor={{ true: Colors.primary }} />}
           </View>
         </View>
 

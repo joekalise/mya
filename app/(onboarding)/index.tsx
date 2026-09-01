@@ -8,8 +8,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -21,7 +23,11 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { Colors } from '@/constants/colors';
 import { Spacing, FontSize, FontFamily, BorderRadius } from '@/constants/theme';
 import { useProfile } from '@/contexts/ProfileContext';
-import { PrimarySymptom, PemOnsetDelay, Medication } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { generateWelcomeContent } from '@/services/aiInsights';
+import { setAiConsent } from '@/services/aiConsent';
+import { getPrivacyPolicyUrl } from '@/utils/links';
+import { WelcomeContent, PrimarySymptom, PemOnsetDelay, Medication } from '@/types';
 
 const TOTAL_STEPS = 4;
 
@@ -56,8 +62,10 @@ function toggleMulti<T>(arr: T[], val: T): T[] {
 }
 
 export default function OnboardingScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const router = useRouter();
   const { saveProfile } = useProfile();
+  const { user } = useAuth();
   const isDark = useColorScheme() === 'dark';
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -68,6 +76,8 @@ export default function OnboardingScreen() {
   const [isCompleting, setIsCompleting] = useState(false);
   const [showTour, setShowTour] = useState(false);
   const [tourStep, setTourStep] = useState(0);
+  const [showConsent, setShowConsent] = useState(false);
+  const [aiConsented, setAiConsented] = useState<boolean | null>(null);
 
   const canProceed = useCallback((): boolean => {
     switch (currentStep) {
@@ -85,7 +95,33 @@ export default function OnboardingScreen() {
   }, [currentStep, primarySymptoms, bellScore, pemOnsetDelay, medications]);
 
   const handleComplete = async () => {
+    if (!user) return;
     setIsCompleting(true);
+
+    let welcomeContent: WelcomeContent = {
+      welcome_message:
+        "Welcome to Mya. We're glad you're here. This app will help you track and understand your ME/CFS, and build the record you need to be believed.",
+      insights: [
+        'Consistent daily tracking is one of the most powerful tools for building evidence of your condition, for yourself and for others.',
+        "Pacing within your energy envelope, not overspending it, is one of the most effective tools for reducing the frequency and severity of crashes.",
+        'Logging PEM (crashes) separately from your daily check-in makes it possible to see the delay between exertion and crash clearly over time.',
+      ],
+      watch_summary:
+        'Mya will monitor your functional level, exertion, and crash patterns to help you and your doctor see the connection between what you do and how you feel.',
+    };
+
+    try {
+      await setAiConsent(aiConsented ?? true);
+    } catch {}
+
+    if (aiConsented) {
+      try {
+        welcomeContent = await generateWelcomeContent({ primarySymptoms, bellScore, pemOnsetDelay, medications }, i18n.language);
+      } catch (err) {
+        console.warn('Claude API failed, using fallback content:', err);
+      }
+    }
+
     try {
       await saveProfile({
         primary_symptoms: primarySymptoms,
@@ -94,12 +130,23 @@ export default function OnboardingScreen() {
         medications,
         notification_time: '20:00',
         ai_context: '',
-        onboarding_complete: true,
+        onboarding_complete: false,
+        welcome_message: welcomeContent.welcome_message,
       });
     } catch (err) {
       console.error('Failed to save profile during onboarding:', err);
-      setIsCompleting(false);
     }
+
+    // Keep isCompleting = true; the loading screen stays up while this
+    // component remains mounted behind profile-ready.
+    router.push({
+      pathname: '/(onboarding)/profile-ready',
+      params: {
+        welcome_message: welcomeContent.welcome_message,
+        insights: JSON.stringify(welcomeContent.insights),
+        watch_summary: welcomeContent.watch_summary,
+      },
+    });
   };
 
   const handleNext = () => {
@@ -114,8 +161,21 @@ export default function OnboardingScreen() {
     if (tourStep < TOUR_SLIDES.length - 1) {
       setTourStep((s) => s + 1);
     } else {
-      handleComplete();
+      setShowTour(false);
+      setShowConsent(true);
     }
+  };
+
+  const handleConsentAgree = () => {
+    setAiConsented(true);
+    setShowConsent(false);
+    handleComplete();
+  };
+
+  const handleConsentDecline = () => {
+    setAiConsented(false);
+    setShowConsent(false);
+    handleComplete();
   };
 
   const handleBack = () => {
@@ -132,13 +192,58 @@ export default function OnboardingScreen() {
     );
   }
 
+  if (showConsent) {
+    const textPrimary = isDark ? Colors.textPrimaryDark : Colors.textPrimary;
+    const textSecondary = isDark ? Colors.textSecondaryDark : Colors.textSecondary;
+    const cardBg = isDark ? Colors.surfaceDark : Colors.surface;
+    const cardBorder = isDark ? Colors.borderDark : Colors.border;
+
+    return (
+      <SafeAreaView style={[styles.screen, isDark && styles.screenDark]}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, { flexGrow: 1 }]} showsVerticalScrollIndicator={false}>
+          <View style={styles.consentHeader}>
+            <Text style={styles.consentEmoji}>🤖</Text>
+            <Text style={[styles.consentTitle, { color: textPrimary }]}>{t('onboarding.ai_consent.title')}</Text>
+            <Text style={[styles.consentSubtitle, { color: textSecondary }]}>{t('onboarding.ai_consent.subtitle')}</Text>
+          </View>
+
+          <View style={[styles.consentCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+            <Text style={[styles.consentSectionTitle, { color: textPrimary }]}>{t('onboarding.ai_consent.what_shared_title')}</Text>
+            {(['what_shared_1', 'what_shared_2', 'what_shared_3'] as const).map((key) => (
+              <View key={key} style={styles.consentBulletRow}>
+                <Text style={[styles.consentBullet, { color: Colors.primary }]}>•</Text>
+                <Text style={[styles.consentBulletText, { color: textSecondary }]}>{t(`onboarding.ai_consent.${key}`)}</Text>
+              </View>
+            ))}
+
+            <View style={[styles.consentDivider, { backgroundColor: cardBorder }]} />
+
+            <Text style={[styles.consentSectionTitle, { color: textPrimary }]}>{t('onboarding.ai_consent.how_used_title')}</Text>
+            <Text style={[styles.consentBodyText, { color: textSecondary }]}>{t('onboarding.ai_consent.how_used_body')}</Text>
+
+            <TouchableOpacity onPress={() => Linking.openURL(getPrivacyPolicyUrl()).catch(() => {})}>
+              <Text style={[styles.consentPrivacyLink, { color: Colors.primary }]}>{t('onboarding.ai_consent.view_privacy_policy')}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.consentActions}>
+            <Button label={t('onboarding.ai_consent.agree_cta')} onPress={handleConsentAgree} />
+            <TouchableOpacity onPress={handleConsentDecline} style={styles.consentDeclineBtn} activeOpacity={0.7}>
+              <Text style={[styles.consentDeclineText, { color: textSecondary }]}>{t('onboarding.ai_consent.decline_cta')}</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
   if (showTour) {
     const slide = TOUR_SLIDES[tourStep];
     const isLastTourSlide = tourStep === TOUR_SLIDES.length - 1;
     return (
       <SafeAreaView style={[styles.screen, isDark && styles.screenDark]}>
         <View style={styles.tourContainer}>
-          <TouchableOpacity onPress={handleComplete} style={styles.tourSkip}>
+          <TouchableOpacity onPress={() => { setShowTour(false); setShowConsent(true); }} style={styles.tourSkip}>
             <Text style={styles.tourSkipText}>{t('onboarding.tour.skip')}</Text>
           </TouchableOpacity>
 
@@ -322,4 +427,20 @@ const styles = StyleSheet.create({
   tourDots: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.xs, marginBottom: Spacing.lg },
   tourDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.border },
   tourDotActive: { backgroundColor: Colors.primary, width: 20 },
+
+  consentHeader: { alignItems: 'center', paddingVertical: Spacing.xl },
+  consentEmoji: { fontSize: 48, marginBottom: Spacing.md },
+  consentTitle: { fontSize: FontSize.xxl, fontWeight: '800', fontFamily: FontFamily.extraBold, textAlign: 'center', marginBottom: Spacing.sm },
+  consentSubtitle: { fontSize: FontSize.sm, textAlign: 'center', lineHeight: 22, paddingHorizontal: Spacing.md },
+  consentCard: { borderWidth: 1, borderRadius: BorderRadius.lg, padding: Spacing.lg, marginBottom: Spacing.xl, gap: Spacing.sm },
+  consentSectionTitle: { fontSize: FontSize.sm, fontWeight: '700', fontFamily: FontFamily.bold, marginBottom: 2 },
+  consentBulletRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'flex-start' },
+  consentBullet: { fontSize: FontSize.sm, lineHeight: 20 },
+  consentBulletText: { fontSize: FontSize.sm, lineHeight: 20, flex: 1 },
+  consentDivider: { height: StyleSheet.hairlineWidth, marginVertical: Spacing.sm },
+  consentBodyText: { fontSize: FontSize.sm, lineHeight: 20 },
+  consentPrivacyLink: { fontSize: FontSize.sm, textDecorationLine: 'underline', marginTop: Spacing.xs },
+  consentActions: { gap: Spacing.md },
+  consentDeclineBtn: { alignItems: 'center', paddingVertical: Spacing.sm },
+  consentDeclineText: { fontSize: FontSize.sm, fontWeight: '600', fontFamily: FontFamily.semiBold },
 });

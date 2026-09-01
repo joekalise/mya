@@ -147,6 +147,19 @@
       "work": "Work",
       "social_life": "Social life",
       "mental_health": "Mental health"
+    },
+    "ai_consent": {
+      "title": "AI-powered personalisation",
+      "subtitle": "Mya uses Claude AI (by Anthropic, Inc.) to generate your personalised insights, welcome message, and chat answers.",
+      "what_shared_title": "What data is shared with Anthropic:",
+      "what_shared_1": "Your profile (symptoms, functional level, PEM patterns)",
+      "what_shared_2": "Symptom logs (functional level, fatigue, crashes, free-text notes)",
+      "what_shared_3": "Health data (sleep, HRV, steps) if you have synced it",
+      "how_used_title": "How it is used:",
+      "how_used_body": "Your data is sent securely to generate insights. Anthropic does not use your data to train AI models. You can turn this off at any time from your profile.",
+      "agree_cta": "I agree, let's go",
+      "decline_cta": "No thanks, basic mode is fine",
+      "view_privacy_policy": "View privacy policy"
     }
   },
   "placeholder_screen": {
@@ -158,7 +171,9 @@
     "cancel": "Cancel",
     "error": "Something went wrong",
     "save_changes": "Save changes",
-    "back": "Back"
+    "back": "Back",
+    "skip": "Skip",
+    "lets_go": "Let's go"
   },
   "tracker": {
     "bell_score_today": "Functional level today",
@@ -397,7 +412,9 @@
     },
     "error_med_name": "Please enter a medication name.",
     "purchase_unavailable": "Purchase could not be completed. Please try again.",
-    "no_purchases": "No previous purchases found to restore."
+    "no_purchases": "No previous purchases found to restore.",
+    "ai_data_sharing": "AI data sharing",
+    "ai_data_sharing_hint": "Lets Claude use your logs and profile to generate personalised insights and chat answers."
   },
   "update_banner": {
     "title": "Update available",
@@ -450,5 +467,14 @@
     "consent_off_title": "AI data sharing is off",
     "consent_off_body": "You've turned off AI data sharing, so Mya can't use your logs to answer questions. Turn it back on from your profile to use chat.",
     "go_to_profile": "Go to profile"
+  },
+  "profile_ready": {
+    "title": "Your Mya profile is ready",
+    "log_title": "Log today while you're here",
+    "log_hint": "Pre-filled from your answers. Change anything that doesn't look right.",
+    "log_instead": "+ Log today instead",
+    "insights_title": "A few things worth knowing",
+    "watch_title": "What Mya will watch for you",
+    "error_save": "Could not save. Please try again."
   }
 }
