@@ -199,6 +199,11 @@ export default function AIChatScreen() {
   const [messages, setMessages] = useState<Message[]>([initialGreeting]);
   const [inputText, setInputText] = useState('');
   const [isSending, setIsSending] = useState(false);
+  // KeyboardAvoidingView measures its own offset from its own top, not the
+  // screen's — since the header sits above it as a sibling (not a child), its
+  // height must be added explicitly or the input row/send button end up
+  // hidden behind the keyboard instead of pushed above it.
+  const [headerHeight, setHeaderHeight] = useState(0);
 
   useEffect(() => {
     if (!user) return;
@@ -328,7 +333,10 @@ export default function AIChatScreen() {
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: bg }]}>
-      <View style={[styles.header, { backgroundColor: bg, borderBottomColor: cardBorder }]}>
+      <View
+        style={[styles.header, { backgroundColor: bg, borderBottomColor: cardBorder }]}
+        onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
+      >
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.8} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={styles.backBtn}>
           <Text style={[styles.backText, { color: Colors.primary }]}>{'‹ ' + t('common.back')}</Text>
         </TouchableOpacity>
@@ -349,7 +357,7 @@ export default function AIChatScreen() {
           </TouchableOpacity>
         </View>
       ) : (
-        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
+        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={headerHeight}>
           <View style={[styles.disclaimer, { backgroundColor: isDark ? '#1a1200' : '#FFF9E6', borderBottomColor: cardBorder }]}>
             <Text style={[styles.disclaimerText, { color: textSecondary }]}>{t('ai_chat.disclaimer')}</Text>
           </View>

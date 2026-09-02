@@ -840,9 +840,12 @@ export default function ProfileScreen() {
           )}
 
           {tracksMedication && (
-            <TouchableOpacity onPress={() => { setEditingMed(null); setShowAddMed(true); }} activeOpacity={0.7}>
-              <Text style={styles.editLink}>{t('profile.medications.add_btn')}</Text>
-            </TouchableOpacity>
+            <>
+              <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('profile.medications.add_hint')}</Text>
+              <TouchableOpacity onPress={() => { setEditingMed(null); setShowAddMed(true); }} activeOpacity={0.7}>
+                <Text style={styles.editLink}>{t('profile.medications.add_btn')}</Text>
+              </TouchableOpacity>
+            </>
           )}
         </View>
 

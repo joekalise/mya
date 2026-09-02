@@ -428,3 +428,4 @@ crashes.delete_title
 crashes.delete_body
 crashes.delete_confirm
 crashes.error_save
+profile.medications.add_hint

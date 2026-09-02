@@ -419,7 +419,8 @@
       "no_treatment_yet": "You haven't added any medication categories yet. You can still add a named medication below.",
       "save": "Add medication",
       "remove_body": "Remove this medication and its reminder?",
-      "remove_btn": "Remove"
+      "remove_btn": "Remove",
+      "add_hint": "Optional. Add a specific medication only if you want a reminder for it, the toggle above is all you need for daily tracking."
     },
     "error_med_name": "Please enter a medication name.",
     "purchase_unavailable": "Purchase could not be completed. Please try again.",
