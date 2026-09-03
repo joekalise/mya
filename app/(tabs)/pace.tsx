@@ -58,7 +58,6 @@ export default function PaceScreen() {
   useFocusEffect(useCallback(() => { refreshLog(); refreshEnvelope(); }, [refreshLog, refreshEnvelope]));
 
   const [editing, setEditing] = useState(false);
-  const [showEnvelopeInfo, setShowEnvelopeInfo] = useState(false);
   const [energyAvailable, setEnergyAvailable] = useState(70);
   const [energySpent, setEnergySpent] = useState(0);
   const [bellScore, setBellScore] = useState(70);
@@ -211,13 +210,8 @@ export default function PaceScreen() {
             <View style={[styles.section, isDark && styles.sectionDark]}>
               <View style={styles.sectionHeaderRow}>
                 <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark, { marginBottom: 0 }]}>{t('pace.energy_envelope')}</Text>
-                <TouchableOpacity onPress={() => setShowEnvelopeInfo((v) => !v)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} activeOpacity={0.7}>
-                  <Text style={[styles.envelopeInfoIcon, { color: showEnvelopeInfo ? Colors.primary : (isDark ? Colors.textSecondaryDark : Colors.textSecondary) }]}>ⓘ</Text>
-                </TouchableOpacity>
+                <InfoButton title={t('pace.energy_envelope')} message={t('pace.envelope_info')} />
               </View>
-              {showEnvelopeInfo && (
-                <Text style={[styles.envelopeInfoText, isDark && styles.textSecDark]}>{t('pace.envelope_info')}</Text>
-              )}
               <Text style={[styles.fieldLabel, isDark && styles.textSecDark]}>{t('pace.available')}</Text>
               <DragSlider value={energyAvailable} onChange={setEnergyAvailable} isDark={isDark} min={0} max={100} step={10} invertColor />
               <Text style={[styles.fieldLabel, isDark && styles.textSecDark]}>{t('pace.spent')}</Text>
@@ -461,8 +455,6 @@ const styles = StyleSheet.create({
   sectionDark: { backgroundColor: Colors.surfaceDark, borderColor: Colors.borderDark },
   sectionLabel: { fontSize: FontSize.md, fontWeight: '700', fontFamily: FontFamily.bold, color: Colors.textPrimary },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.sm },
-  envelopeInfoIcon: { fontSize: FontSize.md },
-  envelopeInfoText: { fontSize: FontSize.xs, lineHeight: 18, color: Colors.textSecondary, marginBottom: Spacing.sm },
   fieldLabel: { fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: Spacing.xs },
   hint: { fontSize: FontSize.xs, color: Colors.textSecondary },
   overBudgetText: { fontSize: FontSize.sm, color: Colors.error, fontWeight: '600' },
