@@ -187,6 +187,7 @@ export default function InsightsScreen() {
   const [latestDsq, setLatestDsq] = useState<DsqSfScore | null>(null);
   const [insight, setInsight] = useState<WeeklyInsight | null>(null);
   const [insightGeneratedAt, setInsightGeneratedAt] = useState<string | null>(null);
+  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoadingMeta, setIsLoadingMeta] = useState(true);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
@@ -278,6 +279,7 @@ export default function InsightsScreen() {
   const handleGenerate = async () => {
     if (!user || !profile) return;
     setIsGenerating(true);
+    setExpandedIdx(null);
     try {
       const [logs, exertionEvents, crashes] = await Promise.all([
         getDailyLogs(user.id, 28),
@@ -387,12 +389,25 @@ export default function InsightsScreen() {
                 {insight ? (
                   <View style={styles.insightBody}>
                     <Text style={[styles.insightSummary, isDark && styles.textPrimaryDark]}>{insight.summary}</Text>
-                    {insight.points.map((p) => (
-                      <View key={p.title} style={styles.insightPoint}>
-                        <Text style={[styles.insightPointTitle, isDark && styles.textPrimaryDark]}>{p.title}</Text>
-                        <Text style={[styles.insightPointDetail, isDark && styles.textSecDark]}>{p.detail}</Text>
-                      </View>
-                    ))}
+                    {insight.points.map((p, idx) => {
+                      const isOpen = expandedIdx === idx;
+                      return (
+                        <TouchableOpacity
+                          key={p.title}
+                          onPress={() => setExpandedIdx(isOpen ? null : idx)}
+                          activeOpacity={0.8}
+                          style={[styles.insightPointRow, isDark && styles.insightPointRowDark]}
+                        >
+                          <Text style={[styles.insightPointTitle, { color: isOpen ? Colors.primary : (isDark ? Colors.textPrimaryDark : Colors.textPrimary) }]}>
+                            {p.title}
+                          </Text>
+                          <Text style={[styles.insightPointChevron, isDark && styles.textSecDark]}>{isOpen ? '∧' : '∨'}</Text>
+                          {isOpen && (
+                            <Text style={[styles.insightPointDetail, isDark && styles.textSecDark]}>{p.detail}</Text>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
                 ) : logCount < 3 && !isLoadingMeta ? (
                   <Text style={[styles.cardBody, isDark && styles.textSecDark]}>{t('insights.not_enough_data')}</Text>
@@ -595,9 +610,19 @@ const styles = StyleSheet.create({
   insightTimestamp: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: -2 },
   insightBody: { gap: Spacing.sm },
   insightSummary: { fontSize: FontSize.sm, lineHeight: 20, color: Colors.textPrimary },
-  insightPoint: { gap: 2 },
-  insightPointTitle: { fontSize: FontSize.sm, fontWeight: '700', fontFamily: FontFamily.bold, color: Colors.textPrimary },
-  insightPointDetail: { fontSize: FontSize.sm, lineHeight: 19, color: Colors.textSecondary },
+  insightPointRow: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.border,
+    paddingVertical: Spacing.sm,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  insightPointRowDark: { borderTopColor: Colors.borderDark },
+  insightPointTitle: { fontSize: FontSize.sm, fontWeight: '700', fontFamily: FontFamily.bold, flex: 1 },
+  insightPointChevron: { fontSize: FontSize.xs, fontWeight: '700', fontFamily: FontFamily.bold, color: Colors.textSecondary },
+  insightPointDetail: { width: '100%', fontSize: FontSize.sm, lineHeight: 19, marginTop: Spacing.xs, color: Colors.textSecondary },
 
   sectionDivider: { height: StyleSheet.hairlineWidth, marginTop: -Spacing.xs },
 
