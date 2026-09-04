@@ -203,7 +203,11 @@
     "medications_afternoon": "Afternoon",
     "medications_evening": "Evening",
     "brain_fog_score": "Brain fog",
-    "brain_fog_score_hint": "0 = clear headed, 10 = severe brain fog"
+    "brain_fog_score_hint": "0 = clear headed, 10 = severe brain fog",
+    "bell_score_info_title": "Functional level vs energy envelope",
+    "bell_score_info_message": "This is the Bell CFS Disability Scale, a snapshot of your overall function right now (100 is normal, 0 is bedridden). It's different from the energy envelope above, which tracks energy available versus energy spent today, not your overall functional capacity.",
+    "fatigue_score_info_title": "Fatigue vs energy envelope",
+    "fatigue_score_info_message": "This is how tired you feel right now, on its own scale. It's different from the energy envelope above, which tracks energy available versus spent, not how tired you feel. You can be fatigued without having overspent your envelope, or vice versa."
   },
   "pace": {
     "title": "Today's energy envelope",

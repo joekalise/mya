@@ -225,7 +225,10 @@ export default function PaceScreen() {
               <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('tracker.symptoms_today')}</Text>
 
               <View style={styles.symptomSubSection}>
-                <Text style={[styles.symptomSubLabel, isDark && styles.textSecDark]}>{t('tracker.bell_score_today')}</Text>
+                <View style={styles.symptomSubHeader}>
+                  <Text style={[styles.symptomSubLabel, isDark && styles.textSecDark]}>{t('tracker.bell_score_today')}</Text>
+                  <InfoButton title={t('tracker.bell_score_info_title')} message={t('tracker.bell_score_info_message')} />
+                </View>
                 <DragSlider value={bellScore} onChange={setBellScore} isDark={isDark} min={0} max={100} step={10} invertColor />
                 <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('tracker.bell_score_hint')}</Text>
               </View>
@@ -233,7 +236,10 @@ export default function PaceScreen() {
               <View style={[styles.symptomDivider, isDark && styles.symptomDividerDark]} />
 
               <View style={styles.symptomSubSection}>
-                <Text style={[styles.symptomSubLabel, isDark && styles.textSecDark]}>{t('tracker.fatigue_score')}</Text>
+                <View style={styles.symptomSubHeader}>
+                  <Text style={[styles.symptomSubLabel, isDark && styles.textSecDark]}>{t('tracker.fatigue_score')}</Text>
+                  <InfoButton title={t('tracker.fatigue_score_info_title')} message={t('tracker.fatigue_score_info_message')} />
+                </View>
                 <DragSlider value={fatigueScore} onChange={setFatigueScore} isDark={isDark} />
                 <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('tracker.fatigue_score_hint')}</Text>
               </View>
@@ -462,6 +468,7 @@ const styles = StyleSheet.create({
   overBudgetText: { fontSize: FontSize.sm, color: Colors.error, fontWeight: '600' },
 
   symptomSubSection: { gap: Spacing.sm },
+  symptomSubHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   symptomSubLabel: { fontSize: FontSize.sm, fontWeight: '600', fontFamily: FontFamily.semiBold, color: Colors.textSecondary },
   symptomDivider: { height: 1, backgroundColor: Colors.border, marginVertical: Spacing.xs },
   symptomDividerDark: { backgroundColor: Colors.borderDark },
