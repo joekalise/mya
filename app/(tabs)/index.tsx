@@ -124,7 +124,7 @@ export default function TodayScreen() {
           <View style={[styles.todaySummaryCard, isDark && styles.todaySummaryCardDark]}>
             <View style={styles.todaySummaryHeader}>
               <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('dashboard.todays_log')}</Text>
-              <TouchableOpacity onPress={() => router.push('/(tabs)/pace')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/pace?edit=true')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Text style={styles.todaySummaryEdit}>{t('dashboard.edit')}</Text>
               </TouchableOpacity>
             </View>
@@ -226,12 +226,6 @@ export default function TodayScreen() {
           </View>
         )}
 
-        {todayLogged && (
-          <TouchableOpacity onPress={() => router.push('/(tabs)/pace')}>
-            <Text style={styles.editLink}>{t('tracker.edit_today')}</Text>
-          </TouchableOpacity>
-        )}
-
         <View style={styles.bottomPad} />
       </ScrollView>
     </SafeAreaView>
@@ -295,8 +289,6 @@ const styles = StyleSheet.create({
   progressTrack: { height: 8, borderRadius: 4, backgroundColor: Colors.border, overflow: 'hidden' },
   progressTrackDark: { backgroundColor: Colors.borderDark },
   progressFill: { height: '100%', borderRadius: 4 },
-
-  editLink: { fontSize: FontSize.sm, color: Colors.primary, fontWeight: '600', textAlign: 'center' },
 
   bottomPad: { height: Spacing.xxl },
 });

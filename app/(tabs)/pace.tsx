@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import {
   View,
   Text,
@@ -446,6 +446,7 @@ export default function PaceScreen() {
   } = useEnergyEnvelope();
   const { tracks: tracksMedication } = useMedicationTracking();
   const medicationDosesPerDay = profile?.medication_doses_per_day ?? 1;
+  const params = useLocalSearchParams<{ edit?: string }>();
 
   useFocusEffect(useCallback(() => { refreshLog(); refreshEnvelope(); }, [refreshLog, refreshEnvelope]));
 
@@ -498,6 +499,9 @@ export default function PaceScreen() {
     return map;
   }, [recentLogs]);
 
+  // Captured once at mount so a later refresh (e.g. after saving) doesn't keep forcing edit mode back on.
+  const forceEditOnLoad = useRef(params.edit === 'true');
+
   const [editing, setEditing] = useState(false);
   const [energyAvailable, setEnergyAvailable] = useState(70);
   const [energySpent, setEnergySpent] = useState(0);
@@ -529,7 +533,8 @@ export default function PaceScreen() {
       setMedsTakenDose3(todayLog.medications_taken_dose_3 ?? 'yes');
       setNotes(todayLog.notes ?? '');
     }
-    setEditing(false);
+    setEditing(forceEditOnLoad.current);
+    forceEditOnLoad.current = false;
     setSaved(false);
   }, [todayLog]);
 
