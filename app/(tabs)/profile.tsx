@@ -1257,9 +1257,10 @@ export default function ProfileScreen() {
               <Text style={[styles.chevron, { color: Colors.primary }]}>›</Text>
             </TouchableOpacity>
             <View style={[styles.rowDivider, { backgroundColor: cardBorder }]} />
-            <View style={[styles.settingsRow, { minHeight: undefined, paddingVertical: Spacing.sm }]}>
-              <Text style={[styles.settingsRowSub, { color: textSecondary, flex: 1 }]}>{t('profile_privacy.sources_dsq_sf')}</Text>
-            </View>
+            <TouchableOpacity onPress={() => Linking.openURL('https://www.leonardjason.com/cfsme_measures-2/')} activeOpacity={0.7} style={styles.settingsRow}>
+              <Text style={[styles.settingsRowLabel, { color: Colors.primary }]}>{t('profile_privacy.sources_dsq_sf')}</Text>
+              <Text style={[styles.chevron, { color: Colors.primary }]}>›</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Privacy policy + version */}

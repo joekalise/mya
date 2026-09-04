@@ -610,7 +610,7 @@
     "sources_disclaimer": "Mya is not a medical device and does not provide medical advice. AI insights are pattern analysis based on your own logged data. Always consult your doctor or healthcare team before making any changes to your treatment.",
     "sources_meaction": "MEAction",
     "sources_meassociation": "ME Association (UK)",
-    "sources_dsq_sf": "DSQ-SF: DePaul Symptom Questionnaire, developed by Leonard A. Jason, PhD, DePaul University",
+    "sources_dsq_sf": "DSQ-SF (Leonard A. Jason, PhD)",
     "ai_consent_toggle_label": "AI personalisation",
     "ai_consent_toggle_subtitle": "Share health data with Claude AI (Anthropic)",
     "ai_body_1": "When you use AI Chat or weekly insights, your symptom logs, health data summaries, and profile information are sent to Anthropic (Claude API) to generate responses. Your raw health data is never sent, only aggregated summaries. Conversation history is stored locally on your device only.",
