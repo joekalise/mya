@@ -120,12 +120,14 @@ export default function PaceScreen() {
           temperature_dysregulation: null,
           flu_like_symptoms: null,
           sensory_chemical_reaction: null,
-          medications_taken: medicationDosesPerDay > 1
-            ? deriveMedicationsTaken([medsTakenDose1, medsTakenDose2, medsTakenDose3].slice(0, medicationDosesPerDay))
-            : medsTaken,
-          medications_taken_dose_1: medicationDosesPerDay > 1 ? medsTakenDose1 : null,
-          medications_taken_dose_2: medicationDosesPerDay > 1 ? medsTakenDose2 : null,
-          medications_taken_dose_3: medicationDosesPerDay > 2 ? medsTakenDose3 : null,
+          medications_taken: !tracksMedication
+            ? null
+            : medicationDosesPerDay > 1
+              ? deriveMedicationsTaken([medsTakenDose1, medsTakenDose2, medsTakenDose3].slice(0, medicationDosesPerDay))
+              : medsTaken,
+          medications_taken_dose_1: tracksMedication && medicationDosesPerDay > 1 ? medsTakenDose1 : null,
+          medications_taken_dose_2: tracksMedication && medicationDosesPerDay > 1 ? medsTakenDose2 : null,
+          medications_taken_dose_3: tracksMedication && medicationDosesPerDay > 2 ? medsTakenDose3 : null,
           notes,
         }),
         saveEnvelope(energyAvailable, energySpent),
