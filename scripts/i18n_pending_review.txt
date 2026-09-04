@@ -701,3 +701,4 @@ profile.medications.common.famotidine
 profile.medications.common.melatonin
 profile.medications.common.b12
 profile.medications.common.coq10
+profile.medications.add_named_link

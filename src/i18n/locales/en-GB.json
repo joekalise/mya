@@ -515,6 +515,7 @@
       "reminder_time": "Reminder time",
       "from_your_treatment": "From your treatment",
       "edit_treatment_link": "Edit",
+      "add_named_link": "Add a specific medication, for reminders ›",
       "tap_to_fill": "Tap one to fill in the name.",
       "no_treatment_yet": "You haven't added any medication categories yet. You can still add a named medication below.",
       "save": "Add medication",

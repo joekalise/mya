@@ -115,6 +115,7 @@ interface ProfileEditModalProps {
     challenges: LifestyleChallenge[];
   };
   onSave: (updates: ProfileEditModalProps['initial']) => Promise<void>;
+  onOpenAddMedication?: () => void;
 }
 
 function EditSectionHeader({ label, color }: { label: string; color: string }) {
@@ -125,7 +126,7 @@ function EditSectionHeader({ label, color }: { label: string; color: string }) {
   );
 }
 
-function ProfileEditModal({ visible, onClose, isDark, initial, onSave }: ProfileEditModalProps) {
+function ProfileEditModal({ visible, onClose, isDark, initial, onSave, onOpenAddMedication }: ProfileEditModalProps) {
   const { t } = useTranslation();
   const { top: topInset } = useSafeAreaInsets();
   const bg = isDark ? Colors.backgroundDark : Colors.background;
@@ -165,7 +166,7 @@ function ProfileEditModal({ visible, onClose, isDark, initial, onSave }: Profile
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  async function handleSave() {
+  async function handleSave(): Promise<boolean> {
     setIsSaving(true);
     try {
       await onSave({
@@ -183,9 +184,11 @@ function ProfileEditModal({ visible, onClose, isDark, initial, onSave }: Profile
         challenges,
       });
       onClose();
+      return true;
     } catch (err) {
       console.error('ProfileEditModal save error:', err);
       Alert.alert(t('common.error'), t('profile.error_save'));
+      return false;
     } finally {
       setIsSaving(false);
     }
@@ -268,6 +271,17 @@ function ProfileEditModal({ visible, onClose, isDark, initial, onSave }: Profile
           {MEDICATIONS.map((v) => (
             <MultiSelectCard key={v} style={compactCard} label={t(`onboarding.medications.${v}`)} isSelected={medications.includes(v)} onPress={() => setMedications((arr) => toggle(arr, v))} />
           ))}
+          {onOpenAddMedication && (
+            <TouchableOpacity
+              onPress={async () => { if (await handleSave()) onOpenAddMedication(); }}
+              activeOpacity={0.8}
+              style={{ marginTop: 4, marginBottom: Spacing.sm }}
+            >
+              <Text style={{ fontSize: FontSize.xs, color: Colors.primary, fontWeight: '600', fontFamily: FontFamily.semiBold }}>
+                {t('profile.medications.add_named_link')}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           <Text style={[styles.editFieldLabel, { color: textSecondary }]}>{t('profile.field_challenges')}</Text>
           {CHALLENGES.map((v) => (
@@ -1333,6 +1347,7 @@ export default function ProfileScreen() {
           challenges: profile?.challenges ?? [],
         }}
         onSave={async (updates) => { await saveProfile(updates); }}
+        onOpenAddMedication={() => setShowAddMed(true)}
       />
 
       <PremiumModal
