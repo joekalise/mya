@@ -220,6 +220,8 @@
     "password_hint": "At least 8 characters",
     "premium": "Premium",
     "set": "Set",
+    "yes": "Yes",
+    "no": "No",
     "day_short": {
       "sun": "Sun",
       "mon": "Mon",
@@ -242,6 +244,8 @@
     "medications_yes": "Yes",
     "medications_partial": "Partial",
     "medications_no": "No",
+    "prn_question_named": "Did you take {{name}} today?",
+    "prn_question_generic": "Did you take any as-needed medication today?",
     "notes": "Notes",
     "notes_placeholder": "Anything else worth noting today...",
     "save": "Save",

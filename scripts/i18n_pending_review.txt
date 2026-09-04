@@ -702,3 +702,7 @@ profile.medications.common.melatonin
 profile.medications.common.b12
 profile.medications.common.coq10
 profile.medications.add_named_link
+common.yes
+common.no
+tracker.prn_question_named
+tracker.prn_question_generic

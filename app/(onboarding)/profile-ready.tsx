@@ -84,6 +84,7 @@ export default function ProfileReadyScreen() {
             medications_taken_dose_1: null,
             medications_taken_dose_2: null,
             medications_taken_dose_3: null,
+            prn_taken: null,
             notes: '',
           })
         );

@@ -97,6 +97,7 @@ export interface DailyLog {
   medications_taken_dose_1: MedsTaken | null;
   medications_taken_dose_2: MedsTaken | null;
   medications_taken_dose_3: MedsTaken | null;
+  prn_taken: boolean | null;
   notes: string;
 }
 

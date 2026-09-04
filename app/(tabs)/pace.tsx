@@ -26,6 +26,7 @@ import { FontSize, Spacing, BorderRadius, FontFamily } from '@/constants/theme';
 import { useDailyLog } from '@/hooks/useDailyLog';
 import { useEnergyEnvelope } from '@/hooks/useEnergyEnvelope';
 import { useMedicationTracking } from '@/hooks/useMedicationTracking';
+import { useMedications } from '@/hooks/useMedications';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/contexts/ProfileContext';
 import { MedsTaken, ExertionType, DailyLog } from '@/types';
@@ -70,13 +71,14 @@ interface DayLogModalProps {
   userId: string;
   tracksMedication: boolean;
   medicationDosesPerDay: number;
+  prnMedNames: string[];
   isDark: boolean;
   t: (key: string, opts?: Record<string, unknown>) => string;
   onSaved: (log: DailyLog) => void;
   onClose: () => void;
 }
 
-function DayLogModal({ date, initialLog, userId, tracksMedication, medicationDosesPerDay, isDark, t, onSaved, onClose }: DayLogModalProps) {
+function DayLogModal({ date, initialLog, userId, tracksMedication, medicationDosesPerDay, prnMedNames, isDark, t, onSaved, onClose }: DayLogModalProps) {
   const modalScrollRef = useRef<ScrollView>(null);
   const [isLoadingEnvelope, setIsLoadingEnvelope] = useState(true);
   const [energyAvailable, setEnergyAvailable] = useState(70);
@@ -88,6 +90,7 @@ function DayLogModal({ date, initialLog, userId, tracksMedication, medicationDos
   const [medsTakenDose1, setMedsTakenDose1] = useState<MedsTaken>(initialLog?.medications_taken_dose_1 ?? 'yes');
   const [medsTakenDose2, setMedsTakenDose2] = useState<MedsTaken>(initialLog?.medications_taken_dose_2 ?? 'yes');
   const [medsTakenDose3, setMedsTakenDose3] = useState<MedsTaken>(initialLog?.medications_taken_dose_3 ?? 'yes');
+  const [prnTaken, setPrnTaken] = useState<boolean | null>(initialLog?.prn_taken ?? null);
   const [notes, setNotes] = useState(initialLog?.notes ?? '');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -130,6 +133,7 @@ function DayLogModal({ date, initialLog, userId, tracksMedication, medicationDos
           medications_taken_dose_1: tracksMedication && medicationDosesPerDay > 1 ? medsTakenDose1 : null,
           medications_taken_dose_2: tracksMedication && medicationDosesPerDay > 1 ? medsTakenDose2 : null,
           medications_taken_dose_3: tracksMedication && medicationDosesPerDay > 2 ? medsTakenDose3 : null,
+          prn_taken: prnMedNames.length > 0 ? prnTaken : null,
           notes,
         }),
         saveDailyEnvelope({ user_id: userId, date, budget_points: energyAvailable, spent_points: energySpent }),
@@ -255,6 +259,33 @@ function DayLogModal({ date, initialLog, userId, tracksMedication, medicationDos
                     })}
                   </View>
                 )}
+              </View>
+            )}
+
+            {prnMedNames.length > 0 && (
+              <View style={[styles.section, isDark && styles.sectionDark]}>
+                <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>
+                  {prnMedNames.length === 1
+                    ? t('tracker.prn_question_named', { name: prnMedNames[0] })
+                    : t('tracker.prn_question_generic')}
+                </Text>
+                <View style={styles.medsRow}>
+                  {[{ value: true, label: t('common.yes') }, { value: false, label: t('common.no') }].map((opt) => {
+                    const selected = prnTaken === opt.value;
+                    return (
+                      <TouchableOpacity
+                        key={String(opt.value)}
+                        onPress={() => setPrnTaken(opt.value)}
+                        style={[styles.medsButton, isDark && styles.medsButtonDark, selected && { borderColor: Colors.primary, backgroundColor: Colors.primaryLight }]}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.optionLabel, isDark && styles.textSecDark, selected && { color: Colors.primaryDark, fontWeight: '700', fontFamily: FontFamily.bold }]}>
+                          {opt.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </View>
             )}
 
@@ -446,6 +477,9 @@ export default function PaceScreen() {
   } = useEnergyEnvelope();
   const { tracks: tracksMedication } = useMedicationTracking();
   const medicationDosesPerDay = profile?.medication_doses_per_day ?? 1;
+  const { medications } = useMedications();
+  const tracksScheduledMeds = tracksMedication && medications.some((m) => !m.as_needed);
+  const prnMedNames = medications.filter((m) => m.as_needed).map((m) => m.name);
   const params = useLocalSearchParams<{ edit?: string }>();
 
   useFocusEffect(useCallback(() => { refreshLog(); refreshEnvelope(); }, [refreshLog, refreshEnvelope]));
@@ -512,6 +546,7 @@ export default function PaceScreen() {
   const [medsTakenDose1, setMedsTakenDose1] = useState<MedsTaken>('yes');
   const [medsTakenDose2, setMedsTakenDose2] = useState<MedsTaken>('yes');
   const [medsTakenDose3, setMedsTakenDose3] = useState<MedsTaken>('yes');
+  const [prnTaken, setPrnTaken] = useState<boolean | null>(null);
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -531,6 +566,7 @@ export default function PaceScreen() {
       setMedsTakenDose1(todayLog.medications_taken_dose_1 ?? 'yes');
       setMedsTakenDose2(todayLog.medications_taken_dose_2 ?? 'yes');
       setMedsTakenDose3(todayLog.medications_taken_dose_3 ?? 'yes');
+      setPrnTaken(todayLog.prn_taken ?? null);
       setNotes(todayLog.notes ?? '');
     }
     setEditing(forceEditOnLoad.current);
@@ -565,14 +601,15 @@ export default function PaceScreen() {
           temperature_dysregulation: null,
           flu_like_symptoms: null,
           sensory_chemical_reaction: null,
-          medications_taken: !tracksMedication
+          medications_taken: !tracksScheduledMeds
             ? null
             : medicationDosesPerDay > 1
               ? deriveMedicationsTaken([medsTakenDose1, medsTakenDose2, medsTakenDose3].slice(0, medicationDosesPerDay))
               : medsTaken,
-          medications_taken_dose_1: tracksMedication && medicationDosesPerDay > 1 ? medsTakenDose1 : null,
-          medications_taken_dose_2: tracksMedication && medicationDosesPerDay > 1 ? medsTakenDose2 : null,
-          medications_taken_dose_3: tracksMedication && medicationDosesPerDay > 2 ? medsTakenDose3 : null,
+          medications_taken_dose_1: tracksScheduledMeds && medicationDosesPerDay > 1 ? medsTakenDose1 : null,
+          medications_taken_dose_2: tracksScheduledMeds && medicationDosesPerDay > 1 ? medsTakenDose2 : null,
+          medications_taken_dose_3: tracksScheduledMeds && medicationDosesPerDay > 2 ? medsTakenDose3 : null,
+          prn_taken: prnMedNames.length > 0 ? prnTaken : null,
           notes,
         }),
         saveEnvelope(energyAvailable, energySpent),
@@ -699,7 +736,7 @@ export default function PaceScreen() {
               <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('tracker.woke_rested_hint')}</Text>
             </View>
 
-            {tracksMedication && (
+            {tracksScheduledMeds && (
               <View style={[styles.section, isDark && styles.sectionDark]}>
                 <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('tracker.medications_taken')}</Text>
                 {medicationDosesPerDay > 1 ? (
@@ -754,6 +791,33 @@ export default function PaceScreen() {
                     })}
                   </View>
                 )}
+              </View>
+            )}
+
+            {prnMedNames.length > 0 && (
+              <View style={[styles.section, isDark && styles.sectionDark]}>
+                <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>
+                  {prnMedNames.length === 1
+                    ? t('tracker.prn_question_named', { name: prnMedNames[0] })
+                    : t('tracker.prn_question_generic')}
+                </Text>
+                <View style={styles.medsRow}>
+                  {[{ value: true, label: t('common.yes') }, { value: false, label: t('common.no') }].map((opt) => {
+                    const selected = prnTaken === opt.value;
+                    return (
+                      <TouchableOpacity
+                        key={String(opt.value)}
+                        onPress={() => setPrnTaken(opt.value)}
+                        style={[styles.medsButton, isDark && styles.medsButtonDark, selected && { borderColor: Colors.primary, backgroundColor: Colors.primaryLight }]}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.optionLabel, isDark && styles.textSecDark, selected && { color: Colors.primaryDark, fontWeight: '700', fontFamily: FontFamily.bold }]}>
+                          {opt.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </View>
             )}
 
@@ -876,8 +940,9 @@ export default function PaceScreen() {
           date={modalDate}
           initialLog={modalLog}
           userId={user.id}
-          tracksMedication={tracksMedication}
+          tracksMedication={tracksScheduledMeds}
           medicationDosesPerDay={medicationDosesPerDay}
+          prnMedNames={prnMedNames}
           isDark={isDark}
           t={t}
           onSaved={(saved) => {
