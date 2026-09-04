@@ -219,7 +219,16 @@
     "new_password": "New password",
     "password_hint": "At least 8 characters",
     "premium": "Premium",
-    "set": "Set"
+    "set": "Set",
+    "day_short": {
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
+    }
   },
   "tracker": {
     "symptoms_today": "Symptoms today",
@@ -302,7 +311,35 @@
     "health_temperature": "Feels like",
     "health_uv_index": "UV index",
     "health_air_quality": "Air quality",
-    "health_info_message": "Steps, sleep, and heart rate sync automatically from Apple Health. Low HRV and a high resting heart rate can signal your body is under more strain, useful context around a crash. Feels-like temperature, UV index, and air quality are shown because heat and weather changes commonly affect ME/CFS and POTS symptoms."
+    "health_info_message": "Steps, sleep, and heart rate sync automatically from Apple Health. Low HRV and a high resting heart rate can signal your body is under more strain, useful context around a crash. Feels-like temperature, UV index, and air quality are shown because heat and weather changes commonly affect ME/CFS and POTS symptoms.",
+    "symptoms_to_watch_title": "Symptoms to watch",
+    "crash_building_title": "Crash risk building",
+    "symptoms_to_watch_body": "A couple of signals worth watching. Keep an eye on how you feel over the next day or two.",
+    "crash_building_body": "Several signals point the same way. Consider scaling back today and staying well within your envelope.",
+    "crash_risk_locked_body": "Mya has spotted a pattern worth a closer look. Unlock Premium to see what it is and chat it through.",
+    "crash_risk_unlock_cta": "Unlock",
+    "chat_about_this": "Chat about this",
+    "signal": {
+      "envelope_overspent": "Overspent envelope",
+      "functional_declining": "Functional level dropping",
+      "brain_fog_rising": "Brain fog rising",
+      "missed_medication": "Missed medication",
+      "hrv_dropping": "HRV dropping",
+      "poor_sleep": "Poor sleep",
+      "hr_elevated": "Resting heart rate up",
+      "low_activity": "Low activity"
+    },
+    "mya_score": "Mya Score",
+    "mya_score_no_data": "Log a few days to see your score.",
+    "score_managing_well": "Managing well",
+    "score_moderate_symptoms": "Moderate symptom load",
+    "score_high_symptom_load": "High symptom load",
+    "score_based_on_days_one": "Based on {{count}} day this week",
+    "score_based_on_days_other": "Based on {{count}} days this week",
+    "this_week": "This week",
+    "legend_good": "Good (70+)",
+    "legend_reduced": "Reduced (40-69)",
+    "legend_low": "Low (under 40)"
   },
   "crashes": {
     "active_title": "Crash in progress",
@@ -655,5 +692,16 @@
     "ai_consent_alert_title": "Share data with Claude AI?",
     "ai_consent_alert_body": "Your symptom logs and profile summaries will be sent to Anthropic to generate AI insights and chat answers. You can turn this off any time.",
     "ai_consent_alert_agree": "Agree and enable"
+  },
+  "score": {
+    "breakdown": "Breakdown",
+    "factor_base": "Base",
+    "factor_functional": "Functional level",
+    "factor_brain_fog": "Brain fog",
+    "factor_active_crash": "Active crash",
+    "factor_recent_crash": "Recent crash",
+    "factor_streak": "Logging consistency",
+    "factor_envelope": "Envelope adherence",
+    "factor_medication": "Medication adherence"
   }
 }
