@@ -224,7 +224,7 @@ export default function TodayScreen() {
                   {healthData.steps !== null && (
                     <>
                       <View style={styles.todaySummaryItem}>
-                        <Text style={[styles.healthStatValue, { color: stepsColor(healthData.steps) }]}>{(healthData.steps / 1000).toFixed(1)}k</Text>
+                        <Text style={[styles.healthStatValue, { color: stepsColor(healthData.steps) }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{(healthData.steps / 1000).toFixed(1)}k</Text>
                         <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_steps')}</Text>
                       </View>
                       {(hasSleep || hasHrv || hasRestingHR) && (
@@ -235,7 +235,7 @@ export default function TodayScreen() {
                   {hasSleep && (
                     <>
                       <View style={styles.todaySummaryItem}>
-                        <Text style={[styles.healthStatValue, { color: sleepColor(healthData.sleep_duration!) }]}>{healthData.sleep_duration}h</Text>
+                        <Text style={[styles.healthStatValue, { color: sleepColor(healthData.sleep_duration!) }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{healthData.sleep_duration}h</Text>
                         <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_sleep')}</Text>
                       </View>
                       {(hasHrv || hasRestingHR) && (
@@ -246,7 +246,7 @@ export default function TodayScreen() {
                   {hasHrv && (
                     <>
                       <View style={styles.todaySummaryItem}>
-                        <Text style={[styles.healthStatValue, { color: hrvColor(healthData.hrv!) }]}>{healthData.hrv}</Text>
+                        <Text style={[styles.healthStatValue, { color: hrvColor(healthData.hrv!) }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{healthData.hrv}</Text>
                         <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_hrv')}</Text>
                       </View>
                       {hasRestingHR && (
@@ -256,7 +256,7 @@ export default function TodayScreen() {
                   )}
                   {hasRestingHR && (
                     <View style={styles.todaySummaryItem}>
-                      <Text style={[styles.healthStatValue, { color: restingHRColor(healthData.resting_heart_rate!) }]}>{healthData.resting_heart_rate}bpm</Text>
+                      <Text style={[styles.healthStatValue, { color: restingHRColor(healthData.resting_heart_rate!) }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{healthData.resting_heart_rate}bpm</Text>
                       <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_resting_hr')}</Text>
                     </View>
                   )}
@@ -269,19 +269,19 @@ export default function TodayScreen() {
                 {healthData && <View style={[styles.healthRowDivider, isDark && styles.healthRowDividerDark]} />}
                 <View style={styles.todaySummaryRow}>
                   <View style={styles.todaySummaryItem}>
-                    <Text style={[styles.healthStatValue, { color: temperatureColor(weather.apparentTemperature) }]}>{weather.apparentTemperature}°</Text>
+                    <Text style={[styles.healthStatValue, { color: temperatureColor(weather.apparentTemperature) }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{weather.apparentTemperature}°</Text>
                     <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_temperature')}</Text>
                   </View>
                   <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
                   <View style={styles.todaySummaryItem}>
-                    <Text style={[styles.healthStatValue, { color: uvIndexColor(weather.uvIndex) }]}>{weather.uvIndex}</Text>
+                    <Text style={[styles.healthStatValue, { color: uvIndexColor(weather.uvIndex) }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{weather.uvIndex}</Text>
                     <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_uv_index')}</Text>
                   </View>
                   {weather.airQualityIndex !== null && (
                     <>
                       <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
                       <View style={styles.todaySummaryItem}>
-                        <Text style={[styles.healthStatValue, { color: airQualityColor(weather.airQualityIndex) }]}>{weather.airQualityIndex}</Text>
+                        <Text style={[styles.healthStatValue, { color: airQualityColor(weather.airQualityIndex) }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{weather.airQualityIndex}</Text>
                         <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_air_quality')}</Text>
                       </View>
                     </>
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
   healthCardDark: { backgroundColor: Colors.surfaceDark, borderColor: Colors.borderDark },
   healthRowDivider: { height: 1, backgroundColor: Colors.border, marginVertical: 4 },
   healthRowDividerDark: { backgroundColor: Colors.borderDark },
-  healthStatValue: { fontSize: FontSize.xxl, fontWeight: '900', fontFamily: FontFamily.extraBold, lineHeight: 30, color: Colors.textPrimary },
+  healthStatValue: { fontSize: FontSize.xl, fontWeight: '900', fontFamily: FontFamily.extraBold, lineHeight: 24, color: Colors.textPrimary },
 
   sectionLabel: { fontSize: FontSize.md, fontWeight: '700', fontFamily: FontFamily.bold, color: Colors.textPrimary },
   progressTrack: { height: 8, borderRadius: 4, backgroundColor: Colors.border, overflow: 'hidden' },
