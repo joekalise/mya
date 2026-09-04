@@ -104,10 +104,13 @@ function computeScore(
   const avgBell = bellLogs.length > 0
     ? bellLogs.reduce((s, l) => s + (l.bell_score_today ?? 70), 0) / bellLogs.length
     : 70;
+  // 3 is brainFogContribution's neutral pivot (bonus below it, penalty above),
+  // not 0 — falling back to 0 when nobody logged brain fog would otherwise
+  // read as "perfectly clear-headed" and hand out an undeserved bonus.
   const brainFogLogs = logs.filter((l) => l.cognitive_dysfunction_score !== null);
   const avgBrainFog = brainFogLogs.length > 0
     ? brainFogLogs.reduce((s, l) => s + (l.cognitive_dysfunction_score ?? 0), 0) / brainFogLogs.length
-    : 0;
+    : 3;
   const avgMedRaw = tracksMedication
     ? logs.reduce((s, l) => s + medicationToPoints(l.medications_taken), 0) / count
     : 0;

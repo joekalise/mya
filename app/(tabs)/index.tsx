@@ -325,7 +325,7 @@ export default function TodayScreen() {
   const { tracks: tracksMedication } = useMedicationTracking();
   const { logs: weekLogs, envelopes: weekEnvelopes, myaScore, scoreBreakdown, refresh: refreshWeekly } = useWeeklyData(tracksMedication);
   const { history: healthHistory } = useHealthHistory(7);
-  const { isSubscribed, monthlyPrice, trialDays, purchase, restore } = useSubscription();
+  const { isSubscribed, isLoading: subLoading, monthlyPrice, trialDays, purchase, restore } = useSubscription();
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
@@ -403,7 +403,7 @@ export default function TodayScreen() {
           </TouchableOpacity>
         )}
 
-        {!activeCrash && crashRisk.level !== 'none' && (
+        {!activeCrash && !subLoading && crashRisk.level !== 'none' && (
           <SignalsToWatchCard
             level={crashRisk.level as 'watch' | 'warning'}
             signals={crashRisk.signals}
