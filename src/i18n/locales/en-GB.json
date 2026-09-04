@@ -200,7 +200,13 @@
     "brain_fog_score": "Brain fog",
     "brain_fog_score_hint": "0 = clear headed, 10 = severe brain fog",
     "bell_score_info_title": "Functional level vs energy envelope",
-    "bell_score_info_message": "This is the Bell CFS Disability Scale, a snapshot of your overall function right now (100 is normal, 0 is bedridden). It's different from the energy envelope above, which tracks energy available versus energy spent today, not your overall functional capacity."
+    "bell_score_info_message": "This is the Bell CFS Disability Scale, a snapshot of your overall function right now (100 is normal, 0 is bedridden). It's different from the energy envelope above, which tracks energy available versus energy spent today, not your overall functional capacity.",
+    "recent_check_ins": "Recent check-ins",
+    "log_this_day": "Log this day",
+    "browse_older": "Browse older entries",
+    "browse_entries_title": "Browse entries",
+    "recent_bell_stat": "Bell {{value}}",
+    "recent_brain_fog_stat": "Brain fog {{value}}"
   },
   "pace": {
     "title": "Today's energy envelope",

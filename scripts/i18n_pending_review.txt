@@ -463,3 +463,9 @@ tracker.symptoms_today
 tracker.brain_fog_score
 tracker.brain_fog_score_hint
 insights.brain_fog_trend
+tracker.recent_check_ins
+tracker.log_this_day
+tracker.browse_older
+tracker.browse_entries_title
+tracker.recent_bell_stat
+tracker.recent_brain_fog_stat
