@@ -16,6 +16,7 @@ import { Colors } from '@/constants/colors';
 import { FontSize, Spacing, BorderRadius, FontFamily } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { saveDsqSfScore } from '@/services/database';
+import { scheduleDsqSfReminder } from '@/services/notifications';
 import { DSQ_SF_ITEMS } from '@/types';
 
 function todayDateString(): string {
@@ -80,6 +81,7 @@ export default function DsqSfScreen() {
       });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await saveDsqSfScore(payload as any);
+      await scheduleDsqSfReminder(payload.date as string).catch(() => {});
       router.back();
     } catch {
       Alert.alert('Failed to save assessment');

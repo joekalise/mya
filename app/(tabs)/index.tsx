@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/common/Button';
 import { Colors } from '@/constants/colors';
 import { FontSize, Spacing, BorderRadius, FontFamily } from '@/constants/theme';
+import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/contexts/ProfileContext';
 import { useDailyLog } from '@/hooks/useDailyLog';
 import { useEnergyEnvelope } from '@/hooks/useEnergyEnvelope';
@@ -22,6 +23,7 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { InfoButton } from '@/components/common/InfoButton';
 import { PremiumModal } from '@/components/common/PremiumModal';
 import { formatTemperature } from '@/utils/units';
+import { sendCrashWarningIfNeeded, sendSoftCrashNoticeIfNeeded, evaluateAndSendNudges } from '@/services/notifications';
 import { DailyLog } from '@/types';
 
 function stepsColor(steps: number): string {
@@ -316,6 +318,7 @@ export default function TodayScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const isDark = useColorScheme() === 'dark';
+  const { user } = useAuth();
   const { profile } = useProfile();
   const { todayLog, todayLogged, isLoading: logLoading, refresh: refreshLog } = useDailyLog();
   const { available, spent, isLoading: envelopeLoading, refresh: refreshEnvelope } = useEnergyEnvelope();
@@ -339,6 +342,26 @@ export default function TodayScreen() {
     recheckHealth();
     refreshWeekly();
   }, [refreshLog, refreshEnvelope, refreshCrashes, recheckHealth, refreshWeekly]));
+
+  // Send a crash warning notification when risk is elevated (once per day max).
+  // Premium users get the specific warning; free users get a generic nudge
+  // back into the app instead (no specifics, that stays behind the paywall),
+  // so the locked card doesn't also mean going silent on them entirely.
+  useEffect(() => {
+    if (!user || subLoading || crashRisk.level === 'none') return;
+    if (!isSubscribed) {
+      sendSoftCrashNoticeIfNeeded(user.id, crashRisk.level).catch(() => {});
+      return;
+    }
+    sendCrashWarningIfNeeded(user.id, crashRisk.level).catch(() => {});
+  }, [user, isSubscribed, subLoading, crashRisk.level]);
+
+  // Proactive nudges — rest, brain fog, functional level, orthostatic symptoms,
+  // sleep (once per day max)
+  useEffect(() => {
+    if (!user || weekLogs.length < 3) return;
+    evaluateAndSendNudges(user.id, weekLogs, healthHistory).catch(() => {});
+  }, [user, weekLogs, healthHistory]);
 
   const handlePurchase = async () => {
     setIsPurchasing(true);

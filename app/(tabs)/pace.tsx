@@ -27,6 +27,7 @@ import { useDailyLog } from '@/hooks/useDailyLog';
 import { useEnergyEnvelope } from '@/hooks/useEnergyEnvelope';
 import { useMedicationTracking } from '@/hooks/useMedicationTracking';
 import { useMedications } from '@/hooks/useMedications';
+import { scheduleDailyCheckInFromTomorrow, scheduleLapseNotification } from '@/services/notifications';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/contexts/ProfileContext';
 import { MedsTaken, ExertionType, DailyLog } from '@/types';
@@ -614,6 +615,15 @@ export default function PaceScreen() {
         }),
         saveEnvelope(energyAvailable, energySpent),
       ]);
+      if (profile?.notification_time) {
+        scheduleDailyCheckInFromTomorrow(profile.notification_time, {
+          bellScore,
+          brainFog: cognitiveScore,
+          wokeRested,
+          streak,
+        }).catch(() => {});
+        scheduleLapseNotification().catch(() => {});
+      }
       setEditing(false);
       setSaved(true);
     } catch {

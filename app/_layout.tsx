@@ -40,6 +40,7 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { UpdateBanner } from '@/components/common/UpdateBanner';
 import { useLockPortraitOnPhones } from '@/hooks/useLockPortraitOnPhones';
 import { registerBackgroundHealthSync } from '@/services/backgroundHealthSync';
+import { scheduleDailyCheckIn, cancelLapseNotification, logLapseNotificationSent } from '@/services/notifications';
 import * as Sentry from '@sentry/react-native';
 
 Sentry.init({
@@ -61,7 +62,7 @@ Notifications.setNotificationHandler({
 
 function RootNavigator() {
   const { session, isLoading: authLoading } = useAuth();
-  const { isOnboardingComplete, isLoading: profileLoading } = useProfile();
+  const { profile, isOnboardingComplete, isLoading: profileLoading } = useProfile();
   const router = useRouter();
   const segments = useSegments();
   const colorScheme = useColorScheme();
@@ -72,12 +73,72 @@ function RootNavigator() {
   // so we must not show the Stack until we confirm arrival at the right place.
   const [isReady, setIsReady] = useState(false);
   const isFirstNavRef = useRef(true);
+  const pendingNotificationScreenRef = useRef<string | null>(null);
 
   useLockPortraitOnPhones();
 
   useEffect(() => {
     registerBackgroundHealthSync().catch(() => {});
   }, []);
+
+  // Route to the relevant screen when a notification is tapped, whether the
+  // app was already running or launched cold from the tap.
+  useEffect(() => {
+    function handleResponse(response: Notifications.NotificationResponse) {
+      const screen = response.notification.request.content.data?.screen as string | undefined;
+      if (!screen) return;
+      if (isReady) {
+        router.push(screen);
+      } else {
+        pendingNotificationScreenRef.current = screen;
+      }
+    }
+
+    // Clear after reading so a normal reopen days later doesn't re-trigger
+    // navigation based on a stale cached tap.
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (response) {
+        handleResponse(response);
+        Notifications.clearLastNotificationResponseAsync().catch(() => {});
+      }
+    });
+    const subscription = Notifications.addNotificationResponseReceivedListener(handleResponse);
+    return () => subscription.remove();
+  }, [isReady, router]);
+
+  // Log lapse re-engagement notifications when they actually deliver, so
+  // effectiveness (delivered vs cancelled by an earlier return) is measurable.
+  // Delivery, not tap, is what we want here: most re-engagement value comes
+  // from the notification pulling the user back, whether or not they tap it.
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+    const sub = Notifications.addNotificationReceivedListener((notification) => {
+      if (notification.request.identifier.startsWith('lapse-reengagement')) {
+        logLapseNotificationSent(userId).catch(() => {});
+      }
+    });
+    return () => sub.remove();
+  }, [session?.user?.id]);
+
+  // Flush a notification tap that arrived before routing settled (cold start).
+  useEffect(() => {
+    if (!isReady || !pendingNotificationScreenRef.current) return;
+    router.push(pendingNotificationScreenRef.current);
+    pendingNotificationScreenRef.current = null;
+  }, [isReady, router]);
+
+  // Reschedule daily check-in for existing users if not already scheduled
+  // (self-heals if the OS ever drops the underlying scheduled notification),
+  // and cancel any pending lapse re-engagement now the user has opened the app.
+  useEffect(() => {
+    if (!session || !isOnboardingComplete || !profile?.notification_time) return;
+    Notifications.getAllScheduledNotificationsAsync().then((scheduled) => {
+      const hasCheckin = scheduled.some((n) => n.identifier === 'daily-checkin');
+      if (!hasCheckin) scheduleDailyCheckIn(profile.notification_time).catch(() => {});
+    }).catch(() => {});
+    cancelLapseNotification().catch(() => {});
+  }, [session?.user?.id, isOnboardingComplete, profile?.notification_time]);
 
   const inAuthGroup = segments[0] === '(auth)';
   const inOnboardingGroup = segments[0] === '(onboarding)';

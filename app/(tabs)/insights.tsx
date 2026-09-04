@@ -23,6 +23,7 @@ import { FontSize, Spacing, BorderRadius, FontFamily } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/contexts/ProfileContext';
 import { getDailyLogs, getRecentExertionEvents, getCrashes, getLatestDsqSfScore, getStreak, getHealthDataRange } from '@/services/database';
+import { scheduleDsqSfReminder } from '@/services/notifications';
 import { generateWeeklyInsight, WeeklyInsight } from '@/services/aiInsights';
 import { useHealthHistory } from '@/hooks/useHealthHistory';
 import { useRecoveryData } from '@/hooks/useRecoveryData';
@@ -240,6 +241,9 @@ export default function InsightsScreen() {
       setLogCount(logs.length);
       setLatestDsq(dsq);
       setStreak(s);
+      // Reschedule on every load so the reminder self-heals if the OS ever
+      // drops the underlying scheduled notification.
+      if (dsq) scheduleDsqSfReminder(dsq.date).catch(() => {});
     } catch (err) {
       console.error('Insights loadMeta error:', err);
     } finally {
