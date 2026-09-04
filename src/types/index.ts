@@ -81,7 +81,7 @@ export interface DailyLog {
   user_id: string;
   date: string;
   bell_score_today: number | null;
-  fatigue_score: number;
+  fatigue_score: number | null;
   cognitive_dysfunction_score: number | null;
   pain_score: number | null;
   woke_rested: boolean | null;

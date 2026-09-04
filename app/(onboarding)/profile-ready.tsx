@@ -46,7 +46,6 @@ export default function ProfileReadyScreen() {
 
   const initBell = profile?.bell_score_baseline ?? 70;
   const [bellScore, setBellScore] = useState(initBell);
-  const [fatigueScore, setFatigueScore] = useState(Math.max(0, Math.min(10, Math.round((100 - initBell) / 10))));
   const [logSkipped, setLogSkipped] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -69,7 +68,7 @@ export default function ProfileReadyScreen() {
             user_id: user.id,
             date: localDateString(),
             bell_score_today: bellScore,
-            fatigue_score: fatigueScore,
+            fatigue_score: null,
             cognitive_dysfunction_score: null,
             pain_score: null,
             woke_rested: null,
@@ -125,11 +124,6 @@ export default function ProfileReadyScreen() {
               {t('dashboard.bell_score')}  <Text style={{ color: textPrimary, fontWeight: '700', fontFamily: FontFamily.bold }}>{bellScore}</Text>
             </Text>
             <DragSlider value={bellScore} onChange={setBellScore} isDark={isDark} min={0} max={100} step={10} invertColor />
-
-            <Text style={[styles.logLabel, { color: textSecondary, marginTop: Spacing.md }]}>
-              {t('dashboard.fatigue')}  <Text style={{ color: textPrimary, fontWeight: '700', fontFamily: FontFamily.bold }}>{fatigueScore}/10</Text>
-            </Text>
-            <DragSlider value={fatigueScore} onChange={setFatigueScore} isDark={isDark} />
           </View>
         ) : (
           <TouchableOpacity onPress={() => setLogSkipped(false)} style={styles.undoSkip} activeOpacity={0.7}>

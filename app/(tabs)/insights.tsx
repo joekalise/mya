@@ -237,13 +237,11 @@ export default function InsightsScreen() {
 
   const bellData = periodLogs.filter((l) => l.bell_score_today !== null).map((l) => l.bell_score_today as number);
   const bellLabels = periodLogs.filter((l) => l.bell_score_today !== null).map((l) => axisLabel(l.date));
-  const fatigueData = periodLogs.map((l) => l.fatigue_score);
   const cognitiveRaw = periodLogs.filter((l) => l.cognitive_dysfunction_score !== null);
   const cognitiveData = cognitiveRaw.map((l) => l.cognitive_dysfunction_score as number);
-  const chartLabels = periodLogs.map((l) => axisLabel(l.date));
+  const cognitiveLabels = cognitiveRaw.map((l) => axisLabel(l.date));
 
   const avgBell = bellData.length > 0 ? Math.round(bellData.reduce((a, b) => a + b, 0) / bellData.length) : null;
-  const avgFatigue = fatigueData.length > 0 ? (fatigueData.reduce((a, b) => a + b, 0) / fatigueData.length).toFixed(1) : null;
   const avgCognitive = cognitiveData.length > 0 ? (cognitiveData.reduce((a, b) => a + b, 0) / cognitiveData.length).toFixed(1) : null;
 
   let bestDay: string | null = null;
@@ -404,35 +402,22 @@ export default function InsightsScreen() {
               />
             </View>
 
-            <View style={[styles.section, isDark && styles.sectionDark]}>
-              <Text style={[styles.cardTitle, isDark && styles.textPrimaryDark]}>{t('insights.fatigue_cognitive_trend')}</Text>
-              {periodLogs.length < 7 && (
-                <Text style={[styles.chartHint, isDark && styles.textSecDark]}>{t('insights.chart_fills_out')}</Text>
-              )}
-              <TrendChart
-                series={[
-                  { data: fatigueData, color: Colors.error, label: t('insights.legend_fatigue') },
-                  ...(cognitiveData.length > 0 ? [{ data: cognitiveData, color: '#8B5CF6', label: t('insights.legend_cognitive') }] : []),
-                ]}
-                labels={chartLabels}
-                height={120}
-                minVal={0}
-                maxVal={10}
-                width={Math.max(10, chartWidth - Spacing.md * 2)}
-              />
-              <View style={styles.legend}>
-                <View style={styles.legendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: Colors.error }]} />
-                  <Text style={[styles.legendText, isDark && styles.textSecDark]}>{t('insights.legend_fatigue')}</Text>
-                </View>
-                {cognitiveData.length > 0 && (
-                  <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: '#8B5CF6' }]} />
-                    <Text style={[styles.legendText, isDark && styles.textSecDark]}>{t('insights.legend_cognitive')}</Text>
-                  </View>
+            {cognitiveData.length > 0 && (
+              <View style={[styles.section, isDark && styles.sectionDark]}>
+                <Text style={[styles.cardTitle, isDark && styles.textPrimaryDark]}>{t('insights.brain_fog_trend')}</Text>
+                {periodLogs.length < 7 && (
+                  <Text style={[styles.chartHint, isDark && styles.textSecDark]}>{t('insights.chart_fills_out')}</Text>
                 )}
+                <TrendChart
+                  series={[{ data: cognitiveData, color: '#8B5CF6', label: t('insights.legend_cognitive') }]}
+                  labels={cognitiveLabels}
+                  height={100}
+                  minVal={0}
+                  maxVal={10}
+                  width={Math.max(10, chartWidth - Spacing.md * 2)}
+                />
               </View>
-            </View>
+            )}
 
             <View style={[styles.section, isDark && styles.sectionDark]}>
               <Text style={[styles.cardTitle, isDark && styles.textPrimaryDark]}>{t('insights.patterns')}</Text>
@@ -441,7 +426,6 @@ export default function InsightsScreen() {
               )}
               <View style={styles.statsGrid}>
                 <StatRow label={t('insights.avg_bell')} value={avgBell !== null ? `${avgBell}/100` : '—'} isDark={isDark} />
-                <StatRow label={t('insights.avg_fatigue')} value={avgFatigue !== null ? `${avgFatigue}/10` : '—'} isDark={isDark} />
                 {avgCognitive !== null && <StatRow label={t('insights.avg_cognitive')} value={`${avgCognitive}/10`} isDark={isDark} />}
                 {bestDay && <StatRow label={t('insights.best_day')} value={bestDay} isDark={isDark} />}
                 {streak > 0 && (

@@ -142,16 +142,6 @@ export default function TodayScreen() {
               <View style={styles.todaySummaryItem}>
                 <Text style={[
                   styles.todaySummaryValue,
-                  todayLog?.fatigue_score !== null && todayLog?.fatigue_score !== undefined
-                    ? { color: severityScoreColor(todayLog.fatigue_score) }
-                    : (isDark && styles.textPrimaryDark),
-                ]}>{todayLog?.fatigue_score ?? '—'}</Text>
-                <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.fatigue')}</Text>
-              </View>
-              <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
-              <View style={styles.todaySummaryItem}>
-                <Text style={[
-                  styles.todaySummaryValue,
                   todayLog?.cognitive_dysfunction_score !== null && todayLog?.cognitive_dysfunction_score !== undefined
                     ? { color: severityScoreColor(todayLog.cognitive_dysfunction_score) }
                     : (isDark && styles.textPrimaryDark),

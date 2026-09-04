@@ -61,10 +61,8 @@ export default function PaceScreen() {
   const [energyAvailable, setEnergyAvailable] = useState(70);
   const [energySpent, setEnergySpent] = useState(0);
   const [bellScore, setBellScore] = useState(70);
-  const [fatigueScore, setFatigueScore] = useState(0);
   const [cognitiveScore, setCognitiveScore] = useState(0);
   const [wokeRested, setWokeRested] = useState<boolean | null>(null);
-  const [pemToday, setPemToday] = useState(false);
   const [medsTaken, setMedsTaken] = useState<MedsTaken>('yes');
   const [medsTakenDose1, setMedsTakenDose1] = useState<MedsTaken>('yes');
   const [medsTakenDose2, setMedsTakenDose2] = useState<MedsTaken>('yes');
@@ -82,10 +80,8 @@ export default function PaceScreen() {
   useEffect(() => {
     if (todayLog) {
       setBellScore(todayLog.bell_score_today ?? 70);
-      setFatigueScore(todayLog.fatigue_score);
       setCognitiveScore(todayLog.cognitive_dysfunction_score ?? 0);
       setWokeRested(todayLog.woke_rested ?? null);
-      setPemToday(todayLog.pem_today);
       setMedsTaken(todayLog.medications_taken ?? 'yes');
       setMedsTakenDose1(todayLog.medications_taken_dose_1 ?? 'yes');
       setMedsTakenDose2(todayLog.medications_taken_dose_2 ?? 'yes');
@@ -111,11 +107,11 @@ export default function PaceScreen() {
       await Promise.all([
         saveLog({
           bell_score_today: bellScore,
-          fatigue_score: fatigueScore,
+          fatigue_score: null,
           cognitive_dysfunction_score: cognitiveScore,
           pain_score: null,
           woke_rested: wokeRested,
-          pem_today: pemToday,
+          pem_today: false,
           dizzy_on_standing: null,
           palpitations: null,
           unsteady_on_feet: null,
@@ -236,35 +232,10 @@ export default function PaceScreen() {
               <View style={[styles.symptomDivider, isDark && styles.symptomDividerDark]} />
 
               <View style={styles.symptomSubSection}>
-                <View style={styles.symptomSubHeader}>
-                  <Text style={[styles.symptomSubLabel, isDark && styles.textSecDark]}>{t('tracker.fatigue_score')}</Text>
-                  <InfoButton title={t('tracker.fatigue_score_info_title')} message={t('tracker.fatigue_score_info_message')} />
-                </View>
-                <DragSlider value={fatigueScore} onChange={setFatigueScore} isDark={isDark} />
-                <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('tracker.fatigue_score_hint')}</Text>
-              </View>
-
-              <View style={[styles.symptomDivider, isDark && styles.symptomDividerDark]} />
-
-              <View style={styles.symptomSubSection}>
                 <Text style={[styles.symptomSubLabel, isDark && styles.textSecDark]}>{t('tracker.brain_fog_score')}</Text>
                 <DragSlider value={cognitiveScore} onChange={setCognitiveScore} isDark={isDark} />
                 <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('tracker.brain_fog_score_hint')}</Text>
               </View>
-            </View>
-
-            <View style={[styles.section, isDark && styles.sectionDark, styles.pemSection]}>
-              <View style={styles.rowBetween}>
-                <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark, styles.pemLabel]}>{t('tracker.pem_today')}</Text>
-                <Switch
-                  value={pemToday}
-                  onValueChange={setPemToday}
-                  trackColor={{ true: Colors.error, false: isDark ? Colors.borderDark : Colors.border }}
-                  thumbColor="#FFFFFF"
-                />
-              </View>
-              <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('tracker.pem_today_hint')}</Text>
-              <Text style={styles.pemSignpost}>{t('tracker.pem_today_signpost')}</Text>
             </View>
 
             <View style={[styles.section, isDark && styles.sectionDark]}>
@@ -473,9 +444,6 @@ const styles = StyleSheet.create({
   symptomDivider: { height: 1, backgroundColor: Colors.border, marginVertical: Spacing.xs },
   symptomDividerDark: { backgroundColor: Colors.borderDark },
 
-  pemSection: { borderColor: Colors.error + '50' },
-  pemLabel: { marginBottom: 0 },
-  pemSignpost: { fontSize: FontSize.xs, color: Colors.error, fontWeight: '600', marginTop: 2 },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
 
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },

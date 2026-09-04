@@ -100,14 +100,11 @@ function buildDataSummary(
   const avgBellScore = avgBell.length > 0
     ? (avgBell.reduce((s, l) => s + (l.bell_score_today ?? 0), 0) / avgBell.length).toFixed(0)
     : null;
-  const avgFatigue = (logs.reduce((s, l) => s + l.fatigue_score, 0) / logs.length).toFixed(1);
 
   const cognitiveLogs = logs.filter((l) => l.cognitive_dysfunction_score !== null);
   const avgCognitive = cognitiveLogs.length > 0
     ? (cognitiveLogs.reduce((s, l) => s + (l.cognitive_dysfunction_score ?? 0), 0) / cognitiveLogs.length).toFixed(1)
     : null;
-
-  const pemDays = logs.filter((l) => l.pem_today).length;
 
   const notes = logs
     .filter((l) => l.notes && l.notes.trim().length > 0)
@@ -131,9 +128,7 @@ function buildDataSummary(
   return `
 TRACKING DATA SUMMARY (last 28 days, ${logs.length} days logged):
 - Average functional level (Bell scale): ${avgBellScore ?? 'not recorded'}/100
-- Average fatigue: ${avgFatigue}/10
-${avgCognitive ? `- Average cognitive dysfunction: ${avgCognitive}/10` : ''}
-- Crash (PEM) days: ${pemDays} of ${logs.length} logged days
+${avgCognitive ? `- Average brain fog: ${avgCognitive}/10` : ''}
 
 EXERTION EVENTS:
 ${exertionSummary}
