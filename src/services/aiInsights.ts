@@ -1,5 +1,5 @@
 import { supabase } from '@/services/supabase';
-import { DailyLog, ExertionEvent, Crash, UserProfile, HealthData, RecoverySnapshot, WelcomeContent, PrimarySymptom, PemOnsetDelay, Medication } from '@/types';
+import { DailyLog, ExertionEvent, Crash, UserProfile, HealthData, RecoverySnapshot, WelcomeContent, PrimarySymptom, PemOnsetDelay, PemDurationTypical, Medication, AgeRange, DiagnosisCriteria, DiagnosisYears, MobilityStatus, Comorbidity, LifestyleChallenge } from '@/types';
 
 export interface WeeklyInsight {
   summary: string;
@@ -293,12 +293,82 @@ const MEDICATION_LABELS: Record<Medication, string> = {
   other: 'other treatment',
 };
 
+const PEM_DURATION_LABELS: Record<PemDurationTypical, string> = {
+  hours: 'a few hours',
+  one_day: 'about a day',
+  several_days: 'several days',
+  week_plus: 'a week or more',
+  variable: 'varies a lot',
+};
+
+const AGE_RANGE_LABELS: Record<AgeRange, string> = {
+  under_25: 'under 25',
+  '25_35': '25-35',
+  '35_45': '35-45',
+  '45_55': '45-55',
+  '55_plus': '55+',
+};
+
+const DIAGNOSIS_CRITERIA_LABELS: Record<DiagnosisCriteria, string> = {
+  fukuda: 'Fukuda (1994 CDC)',
+  canadian_consensus_criteria: 'Canadian Consensus Criteria',
+  international_consensus_criteria: 'International Consensus Criteria',
+  iom_seid: 'IOM / SEID (2015)',
+  not_formally_diagnosed: 'not formally diagnosed',
+  other: 'other criteria',
+};
+
+const DIAGNOSIS_YEARS_LABELS: Record<DiagnosisYears, string> = {
+  not_diagnosed: 'not yet diagnosed',
+  under_1: 'under 1 year',
+  '1_3': '1-3 years',
+  '3_5': '3-5 years',
+  '5_10': '5-10 years',
+  '10_plus': '10+ years',
+};
+
+const MOBILITY_STATUS_LABELS: Record<MobilityStatus, string> = {
+  none: 'no mobility aid needed',
+  mobility_aid: 'uses a mobility aid (cane, walker)',
+  wheelchair_part_time: 'wheelchair, part time',
+  wheelchair_full_time: 'wheelchair, full time',
+  housebound: 'housebound',
+  bedbound: 'bedbound',
+};
+
+const COMORBIDITY_LABELS: Record<Comorbidity, string> = {
+  pots: 'POTS',
+  fibromyalgia: 'fibromyalgia',
+  mcas: 'MCAS',
+  eds: 'EDS',
+  ibs: 'IBS',
+  migraine: 'migraine',
+  anxiety_depression: 'anxiety/depression',
+  mold_illness: 'mould illness',
+  other: 'other comorbidity',
+};
+
+const CHALLENGE_LABELS: Record<LifestyleChallenge, string> = {
+  sleep: 'sleep',
+  exercise: 'exercise/movement',
+  work: 'work',
+  social_life: 'social life',
+  mental_health: 'mental health',
+};
+
 function buildOnboardingPrompt(
   data: {
     primarySymptoms: PrimarySymptom[];
     bellScore: number | null;
     pemOnsetDelay: PemOnsetDelay | null;
+    pemDurationTypical: PemDurationTypical | null;
     medications: Medication[];
+    ageRange: AgeRange | null;
+    diagnosisCriteria: DiagnosisCriteria | null;
+    diagnosisYears: DiagnosisYears | null;
+    mobilityStatus: MobilityStatus | null;
+    comorbidities: Comorbidity[];
+    challenges: LifestyleChallenge[];
   },
   language?: string
 ): string {
@@ -307,10 +377,17 @@ function buildOnboardingPrompt(
   return `You are a warm, knowledgeable companion for someone living with ME/CFS.${langInstruction}
 
 Here is their profile:
+- Age range: ${data.ageRange ? AGE_RANGE_LABELS[data.ageRange] : 'unknown'}
+- Diagnosed under: ${data.diagnosisCriteria ? DIAGNOSIS_CRITERIA_LABELS[data.diagnosisCriteria] : 'unknown'}
+- Time since diagnosis: ${data.diagnosisYears ? DIAGNOSIS_YEARS_LABELS[data.diagnosisYears] : 'unknown'}
 - Primary symptoms: ${data.primarySymptoms.map((s) => SYMPTOM_LABELS[s] ?? s).join(', ') || 'none specified'}
 - Baseline functional level (Bell CFS Disability Scale, 100 is normal function, 0 is bedridden): ${data.bellScore ?? 'unknown'}
 - Typical PEM (post-exertional malaise) onset delay: ${data.pemOnsetDelay ? PEM_ONSET_LABELS[data.pemOnsetDelay] : 'unknown'}
+- Typical PEM duration: ${data.pemDurationTypical ? PEM_DURATION_LABELS[data.pemDurationTypical] : 'unknown'}
+- Mobility: ${data.mobilityStatus ? MOBILITY_STATUS_LABELS[data.mobilityStatus] : 'unknown'}
+- Co-occurring conditions: ${data.comorbidities.map((c) => COMORBIDITY_LABELS[c] ?? c).join(', ') || 'none specified'}
 - Current treatment: ${data.medications.map((m) => MEDICATION_LABELS[m] ?? m).join(', ') || 'none specified'}
+- Hardest daily challenges: ${data.challenges.map((c) => CHALLENGE_LABELS[c] ?? c).join(', ') || 'none specified'}
 
 Please respond with a JSON object with exactly this structure:
 {
@@ -338,7 +415,14 @@ export async function generateWelcomeContent(
     primarySymptoms: PrimarySymptom[];
     bellScore: number | null;
     pemOnsetDelay: PemOnsetDelay | null;
+    pemDurationTypical: PemDurationTypical | null;
     medications: Medication[];
+    ageRange: AgeRange | null;
+    diagnosisCriteria: DiagnosisCriteria | null;
+    diagnosisYears: DiagnosisYears | null;
+    mobilityStatus: MobilityStatus | null;
+    comorbidities: Comorbidity[];
+    challenges: LifestyleChallenge[];
   },
   language?: string
 ): Promise<WelcomeContent> {
