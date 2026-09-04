@@ -174,7 +174,9 @@ module.exports = {
         },
       ],
       '@react-native-community/datetimepicker',
-      '@react-native-firebase/app',
+      // iOS-only until the Android Firebase project exists (needs google-services.json,
+      // see the TODO above) — unused in app code either way, no JS ever imports it.
+      ...(!isAndroid ? ['@react-native-firebase/app'] : []),
       'expo-updates',
       [
         'expo-build-properties',
