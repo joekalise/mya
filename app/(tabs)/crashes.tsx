@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: Spacing.xs },
   hint: { fontSize: FontSize.xs, color: Colors.textSecondary },
 
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, justifyContent: 'center' },
   chip: {
     borderWidth: 1.5, borderColor: Colors.border, borderRadius: BorderRadius.full,
     paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,

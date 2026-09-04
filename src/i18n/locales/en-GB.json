@@ -226,7 +226,7 @@
     "over_budget": "Spent is higher than available today",
     "log_exertion": "Log exertion",
     "log_exertion_optional": "Log a specific exertion (optional)",
-    "log_exertion_hint": "Not required. Useful if you want to flag something specific that might explain a crash later.",
+    "log_exertion_hint": "Useful if you want to flag something specific that might explain a crash later.",
     "exertion_type": "Type",
     "type_physical": "Physical",
     "type_cognitive": "Cognitive",
@@ -262,7 +262,8 @@
     "health_title": "Health",
     "health_temperature": "Feels like",
     "health_uv_index": "UV index",
-    "health_air_quality": "Air quality"
+    "health_air_quality": "Air quality",
+    "health_info_message": "Steps, sleep, and heart rate sync automatically from Apple Health. Low HRV and a high resting heart rate can signal your body is under more strain, useful context around a crash. Feels-like temperature, UV index, and air quality are shown because heat and weather changes commonly affect ME/CFS and POTS symptoms."
   },
   "crashes": {
     "active_title": "Crash in progress",

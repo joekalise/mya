@@ -13,6 +13,7 @@ import { useHealthData } from '@/hooks/useHealthData';
 import { useWeatherData } from '@/hooks/useWeatherData';
 import { ProfileButton } from '@/components/common/ProfileButton';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { InfoButton } from '@/components/common/InfoButton';
 
 function stepsColor(steps: number): string {
   if (steps < 3000 || steps > 12000) return Colors.error;
@@ -157,13 +158,15 @@ export default function TodayScreen() {
                 <View style={styles.energyBarBlock}>
                   <View style={styles.energyBarHeaderRow}>
                     <Text style={[styles.energyBarLabel, isDark && styles.textSecDark]}>{t('dashboard.energy')}</Text>
-                    <Text style={[styles.energyBarValue, overBudget && { color: Colors.error }]}>{spent ?? 0} / {available}</Text>
+                    <Text style={[styles.energyBarValue, { color: overBudget ? Colors.error : Colors.success }]}>{spent ?? 0} / {available}</Text>
                   </View>
                   <View style={[styles.progressTrack, isDark && styles.progressTrackDark]}>
                     <View style={[styles.progressFill, { width: `${fillPct}%`, backgroundColor: overBudget ? Colors.error : Colors.success }]} />
                   </View>
                 </View>
-                <View style={[styles.todaySummaryDividerH, isDark && styles.todaySummaryDividerHDark]} />
+                <View style={styles.energyBarDividerSpacer}>
+                  <View style={[styles.todaySummaryDividerH, isDark && styles.todaySummaryDividerHDark]} />
+                </View>
               </>
             )}
 
@@ -208,52 +211,58 @@ export default function TodayScreen() {
         {/* Independent of manual logging — HealthKit and weather sync on their own */}
         {((healthConnected && healthData) || weather) && (
           <View style={[styles.healthCard, isDark && styles.healthCardDark]}>
-            <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('dashboard.health_title')}</Text>
-            {healthData && (
-            <>
-            <View style={styles.todaySummaryRow}>
-              {healthData.steps !== null && (
-                <>
-                  <View style={styles.todaySummaryItem}>
-                    <Text style={[styles.healthStatValue, { color: stepsColor(healthData.steps) }]}>{(healthData.steps / 1000).toFixed(1)}k</Text>
-                    <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_steps')}</Text>
-                  </View>
-                  {(healthData.sleep_duration !== null || healthData.hrv !== null) && (
-                    <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
-                  )}
-                </>
-              )}
-              {healthData.sleep_duration !== null && (
-                <>
-                  <View style={styles.todaySummaryItem}>
-                    <Text style={[styles.healthStatValue, { color: sleepColor(healthData.sleep_duration) }]}>{healthData.sleep_duration}h</Text>
-                    <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_sleep')}</Text>
-                  </View>
-                  {healthData.hrv !== null && (
-                    <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
-                  )}
-                </>
-              )}
-              {healthData.hrv !== null && (
-                <View style={styles.todaySummaryItem}>
-                  <Text style={[styles.healthStatValue, { color: hrvColor(healthData.hrv) }]}>{healthData.hrv}</Text>
-                  <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_hrv')}</Text>
-                </View>
-              )}
+            <View style={styles.todaySummaryHeader}>
+              <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('dashboard.health_title')}</Text>
+              <InfoButton title={t('dashboard.health_title')} message={t('dashboard.health_info_message')} />
             </View>
-            {healthData.resting_heart_rate !== null && (
-              <>
-                <View style={[styles.healthRowDivider, isDark && styles.healthRowDividerDark]} />
+            {healthData && (() => {
+              const hasSleep = healthData.sleep_duration !== null;
+              const hasHrv = healthData.hrv !== null;
+              const hasRestingHR = healthData.resting_heart_rate !== null;
+              return (
                 <View style={styles.todaySummaryRow}>
-                  <View style={styles.todaySummaryItem}>
-                    <Text style={[styles.healthStatValue, { color: restingHRColor(healthData.resting_heart_rate) }]}>{healthData.resting_heart_rate}bpm</Text>
-                    <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_resting_hr')}</Text>
-                  </View>
+                  {healthData.steps !== null && (
+                    <>
+                      <View style={styles.todaySummaryItem}>
+                        <Text style={[styles.healthStatValue, { color: stepsColor(healthData.steps) }]}>{(healthData.steps / 1000).toFixed(1)}k</Text>
+                        <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_steps')}</Text>
+                      </View>
+                      {(hasSleep || hasHrv || hasRestingHR) && (
+                        <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
+                      )}
+                    </>
+                  )}
+                  {hasSleep && (
+                    <>
+                      <View style={styles.todaySummaryItem}>
+                        <Text style={[styles.healthStatValue, { color: sleepColor(healthData.sleep_duration!) }]}>{healthData.sleep_duration}h</Text>
+                        <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_sleep')}</Text>
+                      </View>
+                      {(hasHrv || hasRestingHR) && (
+                        <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
+                      )}
+                    </>
+                  )}
+                  {hasHrv && (
+                    <>
+                      <View style={styles.todaySummaryItem}>
+                        <Text style={[styles.healthStatValue, { color: hrvColor(healthData.hrv!) }]}>{healthData.hrv}</Text>
+                        <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_hrv')}</Text>
+                      </View>
+                      {hasRestingHR && (
+                        <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
+                      )}
+                    </>
+                  )}
+                  {hasRestingHR && (
+                    <View style={styles.todaySummaryItem}>
+                      <Text style={[styles.healthStatValue, { color: restingHRColor(healthData.resting_heart_rate!) }]}>{healthData.resting_heart_rate}bpm</Text>
+                      <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_resting_hr')}</Text>
+                    </View>
+                  )}
                 </View>
-              </>
-            )}
-            </>
-            )}
+              );
+            })()}
 
             {weather && (
               <>
@@ -261,19 +270,19 @@ export default function TodayScreen() {
                 <View style={styles.todaySummaryRow}>
                   <View style={styles.todaySummaryItem}>
                     <Text style={[styles.healthStatValue, { color: temperatureColor(weather.apparentTemperature) }]}>{weather.apparentTemperature}°</Text>
-                    <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>🌡️ {t('dashboard.health_temperature')}</Text>
+                    <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_temperature')}</Text>
                   </View>
                   <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
                   <View style={styles.todaySummaryItem}>
                     <Text style={[styles.healthStatValue, { color: uvIndexColor(weather.uvIndex) }]}>{weather.uvIndex}</Text>
-                    <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>☀️ {t('dashboard.health_uv_index')}</Text>
+                    <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_uv_index')}</Text>
                   </View>
                   {weather.airQualityIndex !== null && (
                     <>
                       <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
                       <View style={styles.todaySummaryItem}>
                         <Text style={[styles.healthStatValue, { color: airQualityColor(weather.airQualityIndex) }]}>{weather.airQualityIndex}</Text>
-                        <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>🌬️ {t('dashboard.health_air_quality')}</Text>
+                        <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_air_quality')}</Text>
                       </View>
                     </>
                   )}
@@ -331,11 +340,12 @@ const styles = StyleSheet.create({
   todaySummaryDividerDark: { backgroundColor: Colors.borderDark },
   todaySummaryDividerH: { height: 1, backgroundColor: Colors.border },
   todaySummaryDividerHDark: { backgroundColor: Colors.borderDark },
+  energyBarDividerSpacer: { paddingVertical: Spacing.xs },
 
-  energyBarBlock: { gap: Spacing.xs },
+  energyBarBlock: { gap: Spacing.sm },
   energyBarHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  energyBarLabel: { fontSize: FontSize.xs, color: Colors.textSecondary, fontWeight: '600', fontFamily: FontFamily.semiBold, textTransform: 'uppercase', letterSpacing: 0.3 },
-  energyBarValue: { fontSize: FontSize.sm, fontWeight: '700', fontFamily: FontFamily.bold, color: Colors.textPrimary },
+  energyBarLabel: { fontSize: FontSize.sm, color: Colors.textSecondary, fontWeight: '600', fontFamily: FontFamily.semiBold },
+  energyBarValue: { fontSize: FontSize.sm, fontWeight: '700', fontFamily: FontFamily.bold },
 
   healthCard: {
     backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: Colors.border,

@@ -591,3 +591,4 @@ dashboard.health_temperature
 dashboard.health_uv_index
 dashboard.health_air_quality
 insights.refresh
+dashboard.health_info_message
