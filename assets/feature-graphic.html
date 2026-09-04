@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 1024px; height: 500px; overflow: hidden; background: #F97316; }
+
+  .wrap {
+    width: 1024px;
+    height: 500px;
+    background: linear-gradient(160deg, #FDBA74 0%, #F97316 55%, #EA580C 100%);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 80px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Subtle background circles for depth, matching the sibling apps' texture */
+  .bg-circle-1 {
+    position: absolute;
+    width: 520px; height: 520px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.08);
+    top: -170px; right: 140px;
+  }
+  .bg-circle-2 {
+    position: absolute;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.07);
+    bottom: -110px; right: 360px;
+  }
+  .bg-circle-3 {
+    position: absolute;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.10);
+    top: 56px; left: 420px;
+  }
+  .bg-circle-4 {
+    position: absolute;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.10);
+    bottom: 70px; left: 90px;
+  }
+  .bg-circle-5 {
+    position: absolute;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.10);
+    top: 130px; right: 40px;
+  }
+
+  .left {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    z-index: 2;
+  }
+
+  .app-name {
+    font-family: -apple-system, 'Helvetica Neue', sans-serif;
+    font-size: 58px;
+    font-weight: 800;
+    color: #FFFFFF;
+    letter-spacing: -1px;
+    line-height: 1;
+  }
+
+  .tagline {
+    font-family: -apple-system, 'Helvetica Neue', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.92);
+    line-height: 1.35;
+    max-width: 420px;
+  }
+
+  /* Right: enlarged app-icon glyph, with faint radiating signal dots
+     echoing the sibling apps' motif without borrowing fibro's
+     pain-point iconography, which doesn't fit ME/CFS. */
+  .right {
+    z-index: 2;
+    flex-shrink: 0;
+    position: relative;
+    width: 320px;
+    height: 320px;
+  }
+
+  .signal {
+    position: absolute;
+    background: rgba(255,255,255,0.55);
+    border-radius: 999px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bg-circle-1"></div>
+  <div class="bg-circle-2"></div>
+  <div class="bg-circle-3"></div>
+  <div class="bg-circle-4"></div>
+  <div class="bg-circle-5"></div>
+
+  <div class="left">
+    <div class="app-name">Mya</div>
+    <div class="tagline">Know your Crash<br>before it hits</div>
+  </div>
+
+  <div class="right">
+    <svg width="320" height="320" viewBox="0 0 320 320">
+      <!-- faint radiating signal dots -->
+      <circle cx="30" cy="70" r="6" fill="rgba(255,255,255,0.35)"/>
+      <circle cx="10" cy="150" r="4" fill="rgba(255,255,255,0.28)"/>
+      <circle cx="290" cy="60" r="5" fill="rgba(255,255,255,0.3)"/>
+      <circle cx="305" cy="200" r="7" fill="rgba(255,255,255,0.32)"/>
+      <circle cx="40" cy="270" r="5" fill="rgba(255,255,255,0.28)"/>
+      <circle cx="270" cy="290" r="4" fill="rgba(255,255,255,0.28)"/>
+
+      <!-- resting figure, matching the app icon glyph -->
+      <circle cx="110" cy="130" r="46" fill="#FFFFFF"/>
+      <rect x="88" y="192" width="210" height="65" rx="32.5" fill="#FFFFFF"/>
+      <rect x="60" y="270" width="255" height="26" rx="13" fill="#FFFFFF"/>
+    </svg>
+  </div>
+</div>
+</body>
+</html>
