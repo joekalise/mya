@@ -261,19 +261,19 @@ export default function TodayScreen() {
                 <View style={styles.todaySummaryRow}>
                   <View style={styles.todaySummaryItem}>
                     <Text style={[styles.healthStatValue, { color: temperatureColor(weather.apparentTemperature) }]}>{weather.apparentTemperature}°</Text>
-                    <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_temperature')}</Text>
+                    <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>🌡️ {t('dashboard.health_temperature')}</Text>
                   </View>
                   <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
                   <View style={styles.todaySummaryItem}>
                     <Text style={[styles.healthStatValue, { color: uvIndexColor(weather.uvIndex) }]}>{weather.uvIndex}</Text>
-                    <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_uv_index')}</Text>
+                    <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>☀️ {t('dashboard.health_uv_index')}</Text>
                   </View>
                   {weather.airQualityIndex !== null && (
                     <>
                       <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
                       <View style={styles.todaySummaryItem}>
                         <Text style={[styles.healthStatValue, { color: airQualityColor(weather.airQualityIndex) }]}>{weather.airQualityIndex}</Text>
-                        <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_air_quality')}</Text>
+                        <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>🌬️ {t('dashboard.health_air_quality')}</Text>
                       </View>
                     </>
                   )}

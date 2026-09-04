@@ -309,8 +309,7 @@
   "insights": {
     "title": "Insights",
     "ai_card_title": "AI Insight",
-    "generate": "Generate this week's insight",
-    "generating": "Analysing your data...",
+    "generate": "Generate",
     "not_enough_data": "Log a few more days to get an insight.",
     "dsq_sf_card_title": "DSQ-SF Assessment",
     "dsq_sf_card_body": "The DePaul Symptom Questionnaire, Short Form, the validated ME/CFS research instrument.",
@@ -329,7 +328,7 @@
     "dsq_sf_last_score_due": "Your last DSQ-SF score was {{score}} ({{label}}), {{days}} days ago. Time to reassess.",
     "dsq_sf_score_label": "Latest score",
     "dsq_sf_retake": "Retake",
-    "premium_badge": "PREMIUM",
+    "premium_badge": "Premium",
     "trial_prompt_title": "You've been tracking for a week",
     "trial_prompt_body": "See the patterns driving your crashes with a weekly AI breakdown, and ask your data anything.",
     "trial_prompt_early_title": "Unlock AI-powered insights",
@@ -349,7 +348,8 @@
     "no_data": "Keep tracking to see your patterns emerge here.",
     "chart_fills_out": "This chart fills out as you log more days.",
     "disclaimer": "For informational purposes only. Not medical advice. Always consult your doctor or healthcare team about your symptoms and treatment.",
-    "brain_fog_trend": "Brain fog trend"
+    "brain_fog_trend": "Brain fog trend",
+    "refresh": "Refresh"
   },
   "dsq_sf": {
     "title": "DSQ-SF Assessment",

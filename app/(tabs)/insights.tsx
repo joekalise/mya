@@ -8,6 +8,7 @@ import {
   useColorScheme,
   Alert,
   TouchableOpacity,
+  ActivityIndicator,
   LayoutChangeEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -289,7 +290,21 @@ export default function InsightsScreen() {
                       <Text style={styles.premiumBadgeText}>{t('insights.premium_badge')}</Text>
                     </View>
                   </View>
-                  <InfoButton title={t('insights.info_title')} message={t('insights.info_message')} />
+                  <View style={styles.aiHeaderActions}>
+                    {isGenerating ? (
+                      <ActivityIndicator color={Colors.primary} size="small" />
+                    ) : (
+                      <TouchableOpacity
+                        onPress={handleGenerate}
+                        disabled={logCount < 3}
+                        activeOpacity={0.8}
+                        style={[styles.refreshBtn, { borderColor: Colors.primary, opacity: logCount < 3 ? 0.5 : 1 }]}
+                      >
+                        <Text style={styles.refreshBtnText}>{insight ? t('insights.refresh') : t('insights.generate')}</Text>
+                      </TouchableOpacity>
+                    )}
+                    <InfoButton title={t('insights.info_title')} message={t('insights.info_message')} />
+                  </View>
                 </View>
 
                 {insight ? (
@@ -305,14 +320,6 @@ export default function InsightsScreen() {
                 ) : logCount < 3 && !isLoadingMeta ? (
                   <Text style={[styles.cardBody, isDark && styles.textSecDark]}>{t('insights.not_enough_data')}</Text>
                 ) : null}
-
-                <Button
-                  label={isGenerating ? t('insights.generating') : t('insights.generate')}
-                  onPress={handleGenerate}
-                  isLoading={isGenerating}
-                  disabled={logCount < 3}
-                  variant={insight ? 'outline' : 'primary'}
-                />
               </View>
 
               <TouchableOpacity
@@ -482,6 +489,9 @@ const styles = StyleSheet.create({
 
   aiCard: { borderRadius: BorderRadius.lg, borderWidth: 1.5, padding: Spacing.md, gap: Spacing.sm },
   aiTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, flex: 1 },
+  aiHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  refreshBtn: { borderWidth: 1.5, borderRadius: BorderRadius.full, paddingHorizontal: Spacing.sm, paddingVertical: 4 },
+  refreshBtnText: { fontSize: FontSize.xs, color: Colors.primary, fontWeight: '600', fontFamily: FontFamily.semiBold },
   premiumBadge: { backgroundColor: Colors.primary, paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: BorderRadius.full },
   premiumBadgeText: { fontSize: FontSize.xs, color: '#FFFFFF', fontWeight: '700', fontFamily: FontFamily.bold },
 

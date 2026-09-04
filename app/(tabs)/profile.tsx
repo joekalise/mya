@@ -553,6 +553,7 @@ export default function ProfileScreen() {
   const [isSavingAiContext, setIsSavingAiContext] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [pendingTime, setPendingTime] = useState<Date | null>(null);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [showAddMed, setShowAddMed] = useState(false);
   const [editingMed, setEditingMed] = useState<MedicationReminder | null>(null);
@@ -653,13 +654,23 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleTimeChange = async (_: unknown, selected?: Date) => {
+  const handleUpdateTime = useCallback(() => {
+    setPendingTime(timeToDate(notificationTime));
+    setShowTimePicker(true);
+  }, [notificationTime]);
+
+  const handleSaveTime = useCallback(async () => {
+    if (!pendingTime) return;
     setShowTimePicker(false);
-    if (!selected) return;
-    const timeString = dateToTime(selected);
-    await saveProfile({ notification_time: timeString });
-    if (notificationsEnabled) await scheduleDailyCheckIn(timeString);
-  };
+    const timeString = dateToTime(pendingTime);
+    try {
+      await saveProfile({ notification_time: timeString });
+      if (notificationsEnabled) await scheduleDailyCheckIn(timeString);
+    } catch (err) {
+      console.error('Update notification time error:', err);
+      Alert.alert(t('common.error'), t('profile.error_save'));
+    }
+  }, [pendingTime, notificationsEnabled, saveProfile, t]);
 
   const handleToggleAiConsent = useCallback((value: boolean) => {
     if (value) {
@@ -961,7 +972,7 @@ export default function ProfileScreen() {
             {notificationsEnabled && !showTimePicker && (
               <>
                 <View style={[styles.rowDivider, { backgroundColor: cardBorder }]} />
-                <TouchableOpacity onPress={() => setShowTimePicker(true)} activeOpacity={0.7} style={styles.settingsRow}>
+                <TouchableOpacity onPress={handleUpdateTime} activeOpacity={0.7} style={styles.settingsRow}>
                   <Text style={[styles.settingsRowLabel, { color: textPrimary }]}>{t('profile.medications.reminder_time')}</Text>
                   <Text style={[styles.settingsRowValue, { color: Colors.primary }]}>{notificationTime} ›</Text>
                 </TouchableOpacity>
@@ -970,7 +981,22 @@ export default function ProfileScreen() {
 
             {notificationsEnabled && showTimePicker && (
               <View style={{ paddingHorizontal: Spacing.md, paddingBottom: Spacing.sm }}>
-                <DateTimePicker value={timeToDate(notificationTime)} mode="time" display="spinner" onChange={handleTimeChange} textColor={textPrimary} style={{ width: '100%', height: 150 }} />
+                <DateTimePicker
+                  value={pendingTime ?? timeToDate(notificationTime)}
+                  mode="time"
+                  display="spinner"
+                  onChange={(_event, date) => { if (date) setPendingTime(date); }}
+                  textColor={textPrimary}
+                  style={{ width: '100%', height: 150 }}
+                />
+                <View style={styles.timePickerActions}>
+                  <TouchableOpacity onPress={() => setShowTimePicker(false)} style={[styles.timePickerCancel, { borderColor: cardBorder }]} activeOpacity={0.8}>
+                    <Text style={{ color: textSecondary, fontWeight: '500', fontFamily: FontFamily.medium }}>{t('common.cancel')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={handleSaveTime} style={styles.timePickerSave} activeOpacity={0.8}>
+                    <Text style={{ color: '#FFFFFF', fontWeight: '600', fontFamily: FontFamily.semiBold }}>{t('common.set')}</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
 
