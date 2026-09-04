@@ -259,7 +259,10 @@
     "todays_log": "Today's log",
     "edit": "Edit",
     "meds": "Meds",
-    "health_title": "Health"
+    "health_title": "Health",
+    "health_temperature": "Feels like",
+    "health_uv_index": "UV index",
+    "health_air_quality": "Air quality"
   },
   "crashes": {
     "active_title": "Crash in progress",
@@ -275,7 +278,7 @@
     "symptom_pem": "Post-exertional malaise (PEM)",
     "symptom_cognitive_dysfunction": "Brain fog",
     "symptom_pain": "Pain",
-    "symptom_orthostatic_intolerance": "Orthostatic intolerance (dizzy on standing)",
+    "symptom_orthostatic_intolerance": "Dizzy on standing",
     "symptom_sensory_sensitivity": "Sensory sensitivity",
     "likely_trigger": "What likely triggered this? (optional)",
     "no_trigger": "Not sure / no recent exertion",

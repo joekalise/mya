@@ -247,6 +247,24 @@ export async function saveHealthData(data: Omit<HealthData, 'id'>): Promise<Heal
   }
 }
 
+// Deliberately sends only the weather fields — Supabase upsert only touches
+// the columns provided, so any HealthKit/Health Connect data already saved
+// for the day keeps its values.
+export async function saveWeatherData(
+  userId: string,
+  date: string,
+  weather: { temperature: number; apparent_temperature: number; uv_index: number; air_quality_index: number | null }
+): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('health_data')
+      .upsert({ user_id: userId, date, ...weather }, { onConflict: 'user_id,date' });
+    if (error) throw error;
+  } catch (err) {
+    console.error('saveWeatherData error:', err);
+  }
+}
+
 export async function getTodayHealthData(userId: string, date: string): Promise<HealthData | null> {
   try {
     const { data, error } = await supabase

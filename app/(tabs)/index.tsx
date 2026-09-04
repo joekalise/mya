@@ -10,6 +10,7 @@ import { useDailyLog } from '@/hooks/useDailyLog';
 import { useEnergyEnvelope } from '@/hooks/useEnergyEnvelope';
 import { useCrashes } from '@/hooks/useCrashes';
 import { useHealthData } from '@/hooks/useHealthData';
+import { useWeatherData } from '@/hooks/useWeatherData';
 import { ProfileButton } from '@/components/common/ProfileButton';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 
@@ -34,6 +35,27 @@ function hrvColor(hrv: number): string {
 function restingHRColor(bpm: number): string {
   if (bpm >= 100 || bpm < 45) return Colors.error;
   if (bpm >= 90 || bpm < 50) return Colors.warning;
+  return Colors.success;
+}
+
+// Heat worsens autonomic symptoms (POTS/orthostatic intolerance) and general
+// crash risk in ME/CFS, cold intolerance is also common, hence the U-shape.
+function temperatureColor(celsius: number): string {
+  if (celsius >= 30 || celsius <= 0) return Colors.error;
+  if (celsius >= 25 || celsius <= 5) return Colors.warning;
+  return Colors.success;
+}
+
+function uvIndexColor(uv: number): string {
+  if (uv >= 8) return Colors.error;
+  if (uv >= 3) return Colors.warning;
+  return Colors.success;
+}
+
+// US AQI bands (EPA)
+function airQualityColor(aqi: number): string {
+  if (aqi > 150) return Colors.error;
+  if (aqi > 100) return Colors.warning;
   return Colors.success;
 }
 
@@ -69,6 +91,7 @@ export default function TodayScreen() {
   const { available, spent, isLoading: envelopeLoading, refresh: refreshEnvelope } = useEnergyEnvelope();
   const { activeCrash, isLoading: crashLoading, refresh: refreshCrashes } = useCrashes();
   const { isConnected: healthConnected, todayData: healthData, recheck: recheckHealth } = useHealthData();
+  const { weather } = useWeatherData();
 
   useFocusEffect(useCallback(() => {
     refreshLog();
@@ -128,6 +151,22 @@ export default function TodayScreen() {
                 <Text style={styles.todaySummaryEdit}>{t('dashboard.edit')}</Text>
               </TouchableOpacity>
             </View>
+
+            {available !== null && (
+              <>
+                <View style={styles.energyBarBlock}>
+                  <View style={styles.energyBarHeaderRow}>
+                    <Text style={[styles.energyBarLabel, isDark && styles.textSecDark]}>{t('dashboard.energy')}</Text>
+                    <Text style={[styles.energyBarValue, overBudget && { color: Colors.error }]}>{spent ?? 0} / {available}</Text>
+                  </View>
+                  <View style={[styles.progressTrack, isDark && styles.progressTrackDark]}>
+                    <View style={[styles.progressFill, { width: `${fillPct}%`, backgroundColor: overBudget ? Colors.error : Colors.success }]} />
+                  </View>
+                </View>
+                <View style={[styles.todaySummaryDividerH, isDark && styles.todaySummaryDividerHDark]} />
+              </>
+            )}
+
             <View style={styles.todaySummaryRow}>
               <View style={styles.todaySummaryItem}>
                 <Text style={[
@@ -166,10 +205,12 @@ export default function TodayScreen() {
           </View>
         )}
 
-        {/* Independent of manual logging — HealthKit syncs on its own */}
-        {healthConnected && healthData && (
+        {/* Independent of manual logging — HealthKit and weather sync on their own */}
+        {((healthConnected && healthData) || weather) && (
           <View style={[styles.healthCard, isDark && styles.healthCardDark]}>
             <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('dashboard.health_title')}</Text>
+            {healthData && (
+            <>
             <View style={styles.todaySummaryRow}>
               {healthData.steps !== null && (
                 <>
@@ -211,18 +252,34 @@ export default function TodayScreen() {
                 </View>
               </>
             )}
-          </View>
-        )}
+            </>
+            )}
 
-        {todayLogged && available !== null && (
-          <View style={[styles.section, isDark && styles.sectionDark]}>
-            <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('dashboard.energy')}</Text>
-            <View style={[styles.progressTrack, isDark && styles.progressTrackDark]}>
-              <View style={[styles.progressFill, { width: `${fillPct}%`, backgroundColor: overBudget ? Colors.error : Colors.success }]} />
-            </View>
-            <Text style={[styles.hint, isDark && styles.textSecDark]}>
-              {spent ?? 0} / {available}
-            </Text>
+            {weather && (
+              <>
+                {healthData && <View style={[styles.healthRowDivider, isDark && styles.healthRowDividerDark]} />}
+                <View style={styles.todaySummaryRow}>
+                  <View style={styles.todaySummaryItem}>
+                    <Text style={[styles.healthStatValue, { color: temperatureColor(weather.apparentTemperature) }]}>{weather.apparentTemperature}°</Text>
+                    <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_temperature')}</Text>
+                  </View>
+                  <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
+                  <View style={styles.todaySummaryItem}>
+                    <Text style={[styles.healthStatValue, { color: uvIndexColor(weather.uvIndex) }]}>{weather.uvIndex}</Text>
+                    <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_uv_index')}</Text>
+                  </View>
+                  {weather.airQualityIndex !== null && (
+                    <>
+                      <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />
+                      <View style={styles.todaySummaryItem}>
+                        <Text style={[styles.healthStatValue, { color: airQualityColor(weather.airQualityIndex) }]}>{weather.airQualityIndex}</Text>
+                        <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_air_quality')}</Text>
+                      </View>
+                    </>
+                  )}
+                </View>
+              </>
+            )}
           </View>
         )}
 
@@ -272,6 +329,13 @@ const styles = StyleSheet.create({
   todaySummaryItemLabel: { fontSize: FontSize.xs, color: Colors.textSecondary, fontWeight: '500', fontFamily: FontFamily.medium, textAlign: 'center' },
   todaySummaryDivider: { width: 1, height: 40, backgroundColor: Colors.border },
   todaySummaryDividerDark: { backgroundColor: Colors.borderDark },
+  todaySummaryDividerH: { height: 1, backgroundColor: Colors.border },
+  todaySummaryDividerHDark: { backgroundColor: Colors.borderDark },
+
+  energyBarBlock: { gap: Spacing.xs },
+  energyBarHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  energyBarLabel: { fontSize: FontSize.xs, color: Colors.textSecondary, fontWeight: '600', fontFamily: FontFamily.semiBold, textTransform: 'uppercase', letterSpacing: 0.3 },
+  energyBarValue: { fontSize: FontSize.sm, fontWeight: '700', fontFamily: FontFamily.bold, color: Colors.textPrimary },
 
   healthCard: {
     backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: Colors.border,
@@ -282,10 +346,7 @@ const styles = StyleSheet.create({
   healthRowDividerDark: { backgroundColor: Colors.borderDark },
   healthStatValue: { fontSize: FontSize.xxl, fontWeight: '900', fontFamily: FontFamily.extraBold, lineHeight: 30, color: Colors.textPrimary },
 
-  section: { backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, gap: Spacing.xs },
-  sectionDark: { backgroundColor: Colors.surfaceDark, borderColor: Colors.borderDark },
   sectionLabel: { fontSize: FontSize.md, fontWeight: '700', fontFamily: FontFamily.bold, color: Colors.textPrimary },
-  hint: { fontSize: FontSize.xs, color: Colors.textSecondary },
   progressTrack: { height: 8, borderRadius: 4, backgroundColor: Colors.border, overflow: 'hidden' },
   progressTrackDark: { backgroundColor: Colors.borderDark },
   progressFill: { height: '100%', borderRadius: 4 },

@@ -183,6 +183,10 @@ export interface HealthData {
   resting_heart_rate: number | null;
   active_calories: number | null;
   workouts: number | null;
+  temperature: number | null;
+  apparent_temperature: number | null;
+  uv_index: number | null;
+  air_quality_index: number | null;
 }
 
 // In-memory only - not persisted to Supabase (no DB migration needed)

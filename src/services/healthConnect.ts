@@ -145,6 +145,10 @@ export async function fetchTodayHealthData(
     resting_heart_rate: null,
     active_calories: null,
     workouts: null,
+    temperature: null,
+    apparent_temperature: null,
+    uv_index: null,
+    air_quality_index: null,
   };
 
   if (!hc) return base;

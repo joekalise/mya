@@ -587,3 +587,6 @@ profile_privacy.ai_body_2
 profile_privacy.ai_consent_alert_title
 profile_privacy.ai_consent_alert_body
 profile_privacy.ai_consent_alert_agree
+dashboard.health_temperature
+dashboard.health_uv_index
+dashboard.health_air_quality
