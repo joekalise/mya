@@ -336,7 +336,7 @@
     "score_high_symptom_load": "High symptom load",
     "score_based_on_days_one": "Based on {{count}} day this week",
     "score_based_on_days_other": "Based on {{count}} days this week",
-    "this_week": "This week",
+    "this_week": "Functional level this week",
     "legend_good": "Good (70+)",
     "legend_reduced": "Reduced (40-69)",
     "legend_low": "Low (under 40)"
@@ -426,7 +426,15 @@
     "chart_fills_out": "This chart fills out as you log more days.",
     "disclaimer": "For informational purposes only. Not medical advice. Always consult your doctor or healthcare team about your symptoms and treatment.",
     "brain_fog_trend": "Brain fog trend",
-    "refresh": "Refresh"
+    "refresh": "Refresh",
+    "cache_just_now": "just now",
+    "cache_mins_ago": "{{mins}} min ago",
+    "cache_hours_ago": "{{hours}}h ago",
+    "cache_yesterday": "yesterday",
+    "cache_days_ago": "{{days}} days ago",
+    "insight_updated": "Updated {{age}}",
+    "temperature_trend": "Feels-like temperature trend",
+    "temperature_trend_subtitle": "Heat and cold can both affect ME/CFS and POTS symptoms."
   },
   "dsq_sf": {
     "title": "DSQ-SF Assessment",

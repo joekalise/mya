@@ -12,6 +12,7 @@ import {
   LayoutChangeEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/common/Button';
 import { ProfileButton } from '@/components/common/ProfileButton';
@@ -21,15 +22,54 @@ import { Colors } from '@/constants/colors';
 import { FontSize, Spacing, BorderRadius, FontFamily } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/contexts/ProfileContext';
-import { getDailyLogs, getRecentExertionEvents, getCrashes, getLatestDsqSfScore, getStreak } from '@/services/database';
+import { getDailyLogs, getRecentExertionEvents, getCrashes, getLatestDsqSfScore, getStreak, getHealthDataRange } from '@/services/database';
 import { generateWeeklyInsight, WeeklyInsight } from '@/services/aiInsights';
 import { useHealthHistory } from '@/hooks/useHealthHistory';
 import { useRecoveryData } from '@/hooks/useRecoveryData';
 import { useSubscription } from '@/hooks/useSubscription';
 import { PremiumModal } from '@/components/common/PremiumModal';
-import { DsqSfScore, DailyLog } from '@/types';
+import { DsqSfScore, DailyLog, HealthData } from '@/types';
+import { deviceUsesFahrenheit, celsiusToFahrenheit } from '@/utils/units';
 
 type Period = 7 | 30 | 90 | 180;
+
+// ─── Insight cache ────────────────────────────────────────────────────────────
+
+interface InsightCache {
+  insight: WeeklyInsight;
+  generatedAt: string; // ISO date string
+}
+
+function insightCacheKey(userId: string): string {
+  return `@mya_insight_cache_${userId}`;
+}
+
+async function loadInsightCache(userId: string): Promise<InsightCache | null> {
+  try {
+    const raw = await AsyncStorage.getItem(insightCacheKey(userId));
+    if (!raw) return null;
+    return JSON.parse(raw) as InsightCache;
+  } catch {
+    return null;
+  }
+}
+
+async function saveInsightCache(userId: string, insight: WeeklyInsight): Promise<void> {
+  const cache: InsightCache = { insight, generatedAt: new Date().toISOString() };
+  await AsyncStorage.setItem(insightCacheKey(userId), JSON.stringify(cache));
+}
+
+function cacheAgeLabel(generatedAt: string, t: (key: string, opts?: Record<string, unknown>) => string): string {
+  const ms = Date.now() - new Date(generatedAt).getTime();
+  const mins = Math.floor(ms / 60000);
+  const hours = Math.floor(ms / 3600000);
+  const days = Math.floor(ms / 86400000);
+  if (mins < 2) return t('insights.cache_just_now');
+  if (hours < 1) return t('insights.cache_mins_ago', { mins });
+  if (days < 1) return t('insights.cache_hours_ago', { hours });
+  if (days === 1) return t('insights.cache_yesterday');
+  return t('insights.cache_days_ago', { days });
+}
 
 // ─── DSQ-SF scoring ─────────────────────────────────────────────────────────────
 
@@ -146,6 +186,7 @@ export default function InsightsScreen() {
   const [logCount, setLogCount] = useState(0);
   const [latestDsq, setLatestDsq] = useState<DsqSfScore | null>(null);
   const [insight, setInsight] = useState<WeeklyInsight | null>(null);
+  const [insightGeneratedAt, setInsightGeneratedAt] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoadingMeta, setIsLoadingMeta] = useState(true);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
@@ -154,6 +195,7 @@ export default function InsightsScreen() {
 
   const [period, setPeriod] = useState<Period>(30);
   const [periodLogs, setPeriodLogs] = useState<DailyLog[]>([]);
+  const [periodHealthData, setPeriodHealthData] = useState<HealthData[]>([]);
   const [isLoadingChart, setIsLoadingChart] = useState(true);
   const [streak, setStreak] = useState(0);
   const [chartWidth, setChartWidth] = useState(300);
@@ -206,11 +248,29 @@ export default function InsightsScreen() {
 
   useFocusEffect(useCallback(() => { loadMeta(); }, [loadMeta]));
 
+  // Load any previously generated insight from cache on mount, so it survives
+  // navigating away and reopening the app instead of resetting every time.
+  useEffect(() => {
+    if (!user) return;
+    loadInsightCache(user.id).then((cache) => {
+      if (cache) {
+        setInsight(cache.insight);
+        setInsightGeneratedAt(cache.generatedAt);
+      }
+    });
+  }, [user]);
+
   useEffect(() => {
     if (!user) return;
     setIsLoadingChart(true);
-    getDailyLogs(user.id, period)
-      .then(setPeriodLogs)
+    Promise.all([
+      getDailyLogs(user.id, period),
+      getHealthDataRange(user.id, period),
+    ])
+      .then(([logs, healthData]) => {
+        setPeriodLogs(logs);
+        setPeriodHealthData(healthData);
+      })
       .catch((err) => console.error('Insights chart load error:', err))
       .finally(() => setIsLoadingChart(false));
   }, [user, period]);
@@ -226,6 +286,9 @@ export default function InsightsScreen() {
       ]);
       const result = await generateWeeklyInsight({ logs, exertionEvents, crashes, profile, healthHistory, recoveryData });
       setInsight(result);
+      const now = new Date().toISOString();
+      setInsightGeneratedAt(now);
+      await saveInsightCache(user.id, result);
     } catch (err) {
       Alert.alert(err instanceof Error ? err.message : 'Failed to generate insight');
     } finally {
@@ -241,6 +304,14 @@ export default function InsightsScreen() {
   const cognitiveRaw = periodLogs.filter((l) => l.cognitive_dysfunction_score !== null);
   const cognitiveData = cognitiveRaw.map((l) => l.cognitive_dysfunction_score as number);
   const cognitiveLabels = cognitiveRaw.map((l) => axisLabel(l.date));
+
+  const temperatureRaw = periodHealthData.filter((d) => d.apparent_temperature !== null);
+  const useFahrenheit = deviceUsesFahrenheit();
+  const temperatureData = temperatureRaw.map((d) => {
+    const celsius = d.apparent_temperature as number;
+    return useFahrenheit ? celsiusToFahrenheit(celsius) : celsius;
+  });
+  const temperatureLabels = temperatureRaw.map((d) => axisLabel(d.date));
 
   const avgBell = bellData.length > 0 ? Math.round(bellData.reduce((a, b) => a + b, 0) / bellData.length) : null;
   const avgCognitive = cognitiveData.length > 0 ? (cognitiveData.reduce((a, b) => a + b, 0) / cognitiveData.length).toFixed(1) : null;
@@ -306,6 +377,12 @@ export default function InsightsScreen() {
                     <InfoButton title={t('insights.info_title')} message={t('insights.info_message')} />
                   </View>
                 </View>
+
+                {insightGeneratedAt && !isGenerating && (
+                  <Text style={[styles.insightTimestamp, isDark && styles.textSecDark]}>
+                    {t('insights.insight_updated', { age: cacheAgeLabel(insightGeneratedAt, t) })}
+                  </Text>
+                )}
 
                 {insight ? (
                   <View style={styles.insightBody}>
@@ -426,6 +503,21 @@ export default function InsightsScreen() {
               </View>
             )}
 
+            {temperatureData.length > 0 && (
+              <View style={[styles.section, isDark && styles.sectionDark]}>
+                <Text style={[styles.cardTitle, isDark && styles.textPrimaryDark]}>{t('insights.temperature_trend')}</Text>
+                <Text style={[styles.chartHint, isDark && styles.textSecDark]}>{t('insights.temperature_trend_subtitle')}</Text>
+                <TrendChart
+                  series={[{ data: temperatureData, color: '#0EA5E9', label: 'temperature' }]}
+                  labels={temperatureLabels}
+                  height={80}
+                  minVal={Math.min(...temperatureData) - 3}
+                  maxVal={Math.max(...temperatureData) + 3}
+                  width={Math.max(10, chartWidth - Spacing.md * 2)}
+                />
+              </View>
+            )}
+
             <View style={[styles.section, isDark && styles.sectionDark]}>
               <Text style={[styles.cardTitle, isDark && styles.textPrimaryDark]}>{t('insights.patterns')}</Text>
               {periodLogs.length < 7 && (
@@ -500,6 +592,7 @@ const styles = StyleSheet.create({
   benefitIcon: { fontSize: FontSize.sm },
   benefitText: { fontSize: FontSize.xs, fontWeight: '600', fontFamily: FontFamily.semiBold, color: Colors.textPrimary },
 
+  insightTimestamp: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: -2 },
   insightBody: { gap: Spacing.sm },
   insightSummary: { fontSize: FontSize.sm, lineHeight: 20, color: Colors.textPrimary },
   insightPoint: { gap: 2 },

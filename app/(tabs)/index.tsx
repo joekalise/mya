@@ -21,6 +21,7 @@ import { ProfileButton } from '@/components/common/ProfileButton';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { InfoButton } from '@/components/common/InfoButton';
 import { PremiumModal } from '@/components/common/PremiumModal';
+import { formatTemperature } from '@/utils/units';
 import { DailyLog } from '@/types';
 
 function stepsColor(steps: number): string {
@@ -545,7 +546,7 @@ export default function TodayScreen() {
                 {healthData && <View style={[styles.healthRowDivider, isDark && styles.healthRowDividerDark]} />}
                 <View style={styles.todaySummaryRow}>
                   <View style={styles.todaySummaryItem}>
-                    <Text style={[styles.healthStatValue, { color: temperatureColor(weather.apparentTemperature) }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{weather.apparentTemperature}°</Text>
+                    <Text style={[styles.healthStatValue, { color: temperatureColor(weather.apparentTemperature) }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{formatTemperature(weather.apparentTemperature)}</Text>
                     <Text style={[styles.todaySummaryItemLabel, isDark && styles.textSecDark]}>{t('dashboard.health_temperature')}</Text>
                   </View>
                   <View style={[styles.todaySummaryDivider, isDark && styles.todaySummaryDividerDark]} />

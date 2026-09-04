@@ -679,3 +679,11 @@ score.factor_recent_crash
 score.factor_streak
 score.factor_envelope
 score.factor_medication
+insights.cache_just_now
+insights.cache_mins_ago
+insights.cache_hours_ago
+insights.cache_yesterday
+insights.cache_days_ago
+insights.insight_updated
+insights.temperature_trend
+insights.temperature_trend_subtitle
