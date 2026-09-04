@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 import { DragSlider } from '@/components/common/DragSlider';
 import { Button } from '@/components/common/Button';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
@@ -310,6 +311,87 @@ export default function PaceScreen() {
             )}
 
             <View style={[styles.section, isDark && styles.sectionDark]}>
+              <TouchableOpacity onPress={() => setShowExertionForm((v) => !v)} activeOpacity={0.7} style={styles.exertionHeaderRow}>
+                <View style={styles.exertionHeaderLeft}>
+                  <Ionicons name="flash-outline" size={18} color={isDark ? Colors.textPrimaryDark : Colors.textPrimary} />
+                  <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark, { marginBottom: 0 }]}>{t('pace.log_exertion_optional')}</Text>
+                  {events.length > 0 && (
+                    <View style={styles.exertionCountBadge}>
+                      <Text style={styles.exertionCountBadgeText}>{events.length}</Text>
+                    </View>
+                  )}
+                </View>
+                <Ionicons name={showExertionForm ? 'chevron-up' : 'chevron-down'} size={18} color={isDark ? Colors.textSecondaryDark : Colors.textSecondary} />
+              </TouchableOpacity>
+              <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('pace.log_exertion_hint')}</Text>
+
+              {showExertionForm && (
+                <>
+                  <Text style={[styles.fieldLabel, isDark && styles.textSecDark]}>{t('pace.exertion_type')}</Text>
+                  <View style={styles.chipRow}>
+                    {EXERTION_TYPES.map((v) => {
+                      const selected = exertionType === v;
+                      return (
+                        <TouchableOpacity key={v} onPress={() => setExertionType(v)} style={[styles.chip, isDark && styles.chipDark, selected && styles.chipSelected]}>
+                          <Text style={[styles.chipText, isDark && !selected && styles.chipTextDark, selected && styles.chipTextSelected]}>{t(`pace.type_${v}`)}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  <Text style={[styles.fieldLabel, isDark && styles.textSecDark]}>{t('pace.intensity')}</Text>
+                  <View style={styles.chipRow}>
+                    {[1, 2, 3, 4, 5].map((v) => {
+                      const selected = exertionIntensity === v;
+                      return (
+                        <TouchableOpacity key={v} onPress={() => setExertionIntensity(v)} style={[styles.intensityBtn, isDark && styles.chipDark, selected && styles.chipSelected]}>
+                          <Text style={[styles.chipText, isDark && !selected && styles.chipTextDark, selected && styles.chipTextSelected]}>{v}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  <Text style={[styles.fieldLabel, isDark && styles.textSecDark]}>{t('pace.duration_minutes')}</Text>
+                  <View style={styles.chipRow}>
+                    {DURATION_PRESETS.map((m) => {
+                      const selected = exertionDuration === m;
+                      return (
+                        <TouchableOpacity key={m} onPress={() => setExertionDuration(selected ? null : m)} style={[styles.chip, isDark && styles.chipDark, selected && styles.chipSelected]}>
+                          <Text style={[styles.chipText, isDark && !selected && styles.chipTextDark, selected && styles.chipTextSelected]}>{m}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  <TextInput
+                    style={[styles.notesInput, isDark && styles.notesInputDark]}
+                    placeholder={t('pace.notes_optional')}
+                    placeholderTextColor={isDark ? Colors.textSecondaryDark : Colors.textSecondary}
+                    value={exertionNotes}
+                    onChangeText={setExertionNotes}
+                  />
+                  <Button label={t('pace.add')} onPress={handleAddExertion} isLoading={isAddingExertion} />
+                </>
+              )}
+
+              {events.length > 0 && (
+                <View style={styles.eventList}>
+                  {events.map((event) => (
+                    <View key={event.id} style={[styles.eventRow, isDark && styles.eventRowDark]}>
+                      <Text style={[styles.eventTitle, isDark && styles.textPrimaryDark]}>
+                        {t(`pace.type_${event.exertion_type}`)} · {t('pace.intensity')} {event.intensity}
+                        {event.duration_minutes ? ` · ${event.duration_minutes}min` : ''}
+                      </Text>
+                      <TouchableOpacity onPress={() => event.id && removeEvent(event.id)}>
+                        <Text style={styles.removeText}>{t('pace.remove')}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            <View style={[styles.section, isDark && styles.sectionDark]}>
               <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('tracker.notes')}</Text>
               <TextInput
                 style={[styles.notesInput, isDark && styles.notesInputDark]}
@@ -326,80 +408,6 @@ export default function PaceScreen() {
             <Button label={t('tracker.save')} onPress={handleSave} isLoading={isSaving} style={styles.saveButton} />
           </>
         )}
-
-        <View style={[styles.section, isDark && styles.sectionDark]}>
-          <TouchableOpacity onPress={() => setShowExertionForm((v) => !v)} activeOpacity={0.7}>
-            <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>
-              {showExertionForm ? '− ' : '+ '}{t('pace.log_exertion_optional')}
-            </Text>
-          </TouchableOpacity>
-          <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('pace.log_exertion_hint')}</Text>
-
-          {showExertionForm && (
-            <>
-              <Text style={[styles.fieldLabel, isDark && styles.textSecDark]}>{t('pace.exertion_type')}</Text>
-              <View style={styles.chipRow}>
-                {EXERTION_TYPES.map((v) => {
-                  const selected = exertionType === v;
-                  return (
-                    <TouchableOpacity key={v} onPress={() => setExertionType(v)} style={[styles.chip, isDark && styles.chipDark, selected && styles.chipSelected]}>
-                      <Text style={[styles.chipText, isDark && !selected && styles.chipTextDark, selected && styles.chipTextSelected]}>{t(`pace.type_${v}`)}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              <Text style={[styles.fieldLabel, isDark && styles.textSecDark]}>{t('pace.intensity')}</Text>
-              <View style={styles.chipRow}>
-                {[1, 2, 3, 4, 5].map((v) => {
-                  const selected = exertionIntensity === v;
-                  return (
-                    <TouchableOpacity key={v} onPress={() => setExertionIntensity(v)} style={[styles.intensityBtn, isDark && styles.chipDark, selected && styles.chipSelected]}>
-                      <Text style={[styles.chipText, isDark && !selected && styles.chipTextDark, selected && styles.chipTextSelected]}>{v}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              <Text style={[styles.fieldLabel, isDark && styles.textSecDark]}>{t('pace.duration_minutes')}</Text>
-              <View style={styles.chipRow}>
-                {DURATION_PRESETS.map((m) => {
-                  const selected = exertionDuration === m;
-                  return (
-                    <TouchableOpacity key={m} onPress={() => setExertionDuration(selected ? null : m)} style={[styles.chip, isDark && styles.chipDark, selected && styles.chipSelected]}>
-                      <Text style={[styles.chipText, isDark && !selected && styles.chipTextDark, selected && styles.chipTextSelected]}>{m}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              <TextInput
-                style={[styles.notesInput, isDark && styles.notesInputDark]}
-                placeholder={t('pace.notes_optional')}
-                placeholderTextColor={isDark ? Colors.textSecondaryDark : Colors.textSecondary}
-                value={exertionNotes}
-                onChangeText={setExertionNotes}
-              />
-              <Button label={t('pace.add')} onPress={handleAddExertion} isLoading={isAddingExertion} />
-            </>
-          )}
-
-          {events.length > 0 && (
-            <View style={styles.eventList}>
-              {events.map((event) => (
-                <View key={event.id} style={[styles.eventRow, isDark && styles.eventRowDark]}>
-                  <Text style={[styles.eventTitle, isDark && styles.textPrimaryDark]}>
-                    {t(`pace.type_${event.exertion_type}`)} · {t('pace.intensity')} {event.intensity}
-                    {event.duration_minutes ? ` · ${event.duration_minutes}min` : ''}
-                  </Text>
-                  <TouchableOpacity onPress={() => event.id && removeEvent(event.id)}>
-                    <Text style={styles.removeText}>{t('pace.remove')}</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
 
         <View style={styles.bottomPad} />
       </ScrollView>
@@ -445,6 +453,11 @@ const styles = StyleSheet.create({
   symptomDividerDark: { backgroundColor: Colors.borderDark },
 
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+
+  exertionHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  exertionHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  exertionCountBadge: { backgroundColor: Colors.primaryLight, borderRadius: BorderRadius.full, paddingHorizontal: Spacing.sm, paddingVertical: 2, minWidth: 22, alignItems: 'center' },
+  exertionCountBadgeText: { fontSize: FontSize.xs, fontWeight: '700', fontFamily: FontFamily.bold, color: Colors.primaryDark },
 
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   chip: { borderWidth: 1.5, borderColor: Colors.border, borderRadius: BorderRadius.full, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
