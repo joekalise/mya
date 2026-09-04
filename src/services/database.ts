@@ -175,6 +175,22 @@ export async function saveDailyEnvelope(envelope: Omit<DailyEnvelope, 'id'>): Pr
   return data as DailyEnvelope;
 }
 
+export async function getDailyEnvelopes(userId: string, days: number): Promise<DailyEnvelope[]> {
+  const since = new Date();
+  since.setDate(since.getDate() - (days - 1));
+  const sinceDate = since.toISOString().split('T')[0];
+
+  const { data, error } = await supabase
+    .from('daily_envelope')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('date', sinceDate)
+    .order('date', { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as DailyEnvelope[];
+}
+
 // ─── DSQ-SF ─────────────────────────────────────────────────────────────────────
 
 export async function saveDsqSfScore(score: Omit<DsqSfScore, 'id'>): Promise<DsqSfScore> {
@@ -199,6 +215,18 @@ export async function getLatestDsqSfScore(userId: string): Promise<DsqSfScore | 
 
   if (error) throw error;
   return data as DsqSfScore | null;
+}
+
+export async function getDsqSfScores(userId: string, limit: number): Promise<DsqSfScore[]> {
+  const { data, error } = await supabase
+    .from('dsq_sf_scores')
+    .select('*')
+    .eq('user_id', userId)
+    .order('date', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data ?? []) as DsqSfScore[];
 }
 
 // ─── Health Data ────────────────────────────────────────────────────────────────

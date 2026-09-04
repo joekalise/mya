@@ -21,9 +21,10 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Notifications from 'expo-notifications';
-import { Button } from '@/components/common/Button';
+import Constants from 'expo-constants';
 import { OptionCard } from '@/components/onboarding/OptionCard';
 import { MultiSelectCard } from '@/components/onboarding/MultiSelectCard';
+import { InfoButton } from '@/components/common/InfoButton';
 import { Colors } from '@/constants/colors';
 import { FontSize, Spacing, BorderRadius, FontFamily } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,9 +34,12 @@ import { useMedications } from '@/hooks/useMedications';
 import { useMedicationTracking } from '@/hooks/useMedicationTracking';
 import { useSubscription } from '@/hooks/useSubscription';
 import { PremiumModal } from '@/components/common/PremiumModal';
-import { deleteAllUserData } from '@/services/database';
+import { supabase } from '@/services/supabase';
+import { deleteAllUserData, getDailyLogs, getCrashes, getDailyEnvelopes, getDsqSfScores } from '@/services/database';
+import { generateAndShareReport } from '@/services/pdfExport';
 import { getAiConsent, setAiConsent } from '@/services/aiConsent';
 import { requestNotificationPermissions, scheduleDailyCheckIn, cancelNotification } from '@/services/notifications';
+import { getPrivacyPolicyUrl } from '@/utils/links';
 import {
   AgeRange,
   BiologicalSex,
@@ -63,6 +67,7 @@ const PRIMARY_SYMPTOMS: PrimarySymptom[] = ['fatigue', 'pem', 'unrefreshing_slee
 const COMORBIDITIES: Comorbidity[] = ['pots', 'fibromyalgia', 'mcas', 'eds', 'ibs', 'migraine', 'anxiety_depression', 'mold_illness', 'other'];
 const MEDICATIONS: Medication[] = ['low_dose_naltrexone', 'beta_blockers', 'antihistamines_h1_h2', 'stimulants', 'antidepressants', 'anticoagulants', 'no_medication', 'other'];
 const CHALLENGES: LifestyleChallenge[] = ['sleep', 'exercise', 'work', 'social_life', 'mental_health'];
+const FREQUENCIES: MedicationReminder['frequency'][] = ['daily', 'weekly', 'fortnightly', 'monthly'];
 
 function toggle<T>(arr: T[], val: T): T[] {
   return arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val];
@@ -98,7 +103,6 @@ interface ProfileEditModalProps {
     comorbidities: Comorbidity[];
     medications: Medication[];
     challenges: LifestyleChallenge[];
-    ai_context: string;
   };
   onSave: (updates: ProfileEditModalProps['initial']) => Promise<void>;
 }
@@ -131,7 +135,6 @@ function ProfileEditModal({ visible, onClose, isDark, initial, onSave }: Profile
   const [comorbidities, setComorbidities] = useState<Comorbidity[]>([]);
   const [medications, setMedications] = useState<Medication[]>([]);
   const [challenges, setChallenges] = useState<LifestyleChallenge[]>([]);
-  const [aiContext, setAiContext] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -148,7 +151,6 @@ function ProfileEditModal({ visible, onClose, isDark, initial, onSave }: Profile
       setComorbidities(initial.comorbidities);
       setMedications(initial.medications);
       setChallenges(initial.challenges);
-      setAiContext(initial.ai_context);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
@@ -169,7 +171,6 @@ function ProfileEditModal({ visible, onClose, isDark, initial, onSave }: Profile
         comorbidities,
         medications,
         challenges,
-        ai_context: aiContext,
       });
       onClose();
     } catch (err) {
@@ -263,18 +264,6 @@ function ProfileEditModal({ visible, onClose, isDark, initial, onSave }: Profile
             <MultiSelectCard key={v} style={compactCard} label={t(`onboarding.challenges.${v}`)} isSelected={challenges.includes(v)} onPress={() => setChallenges((arr) => toggle(arr, v))} />
           ))}
 
-          <EditSectionHeader label={t('profile.section_ai')} color={textSecondary} />
-          <Text style={[styles.editFieldLabel, { color: textSecondary }]}>{t('profile.field_ai_context')}</Text>
-          <TextInput
-            style={[styles.aiContextInput, { color: textPrimary, borderColor: cardBorder }]}
-            value={aiContext}
-            onChangeText={setAiContext}
-            placeholder={t('profile.ai_context_placeholder')}
-            placeholderTextColor={textSecondary}
-            multiline
-            numberOfLines={4}
-          />
-
           <TouchableOpacity onPress={handleSave} disabled={isSaving} activeOpacity={0.8} style={[styles.modalSaveBtn, { marginTop: Spacing.xl, opacity: isSaving ? 0.6 : 1 }]}>
             {isSaving ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.modalSaveText}>{t('common.save_changes')}</Text>}
           </TouchableOpacity>
@@ -296,8 +285,6 @@ interface AddMedicationModalProps {
   isDark: boolean;
   profileMeds?: Medication[];
 }
-
-const FREQUENCIES: MedicationReminder['frequency'][] = ['daily', 'weekly', 'fortnightly', 'monthly'];
 
 function AddMedicationModal({ visible, onClose, onSave, onUpdate, onOpenEditProfile, editingMed, isDark, profileMeds }: AddMedicationModalProps) {
   const { height: screenHeight } = useWindowDimensions();
@@ -534,44 +521,55 @@ function AddMedicationModal({ visible, onClose, onSave, onUpdate, onOpenEditProf
   );
 }
 
-// ─── SummaryRow ─────────────────────────────────────────────────────────────────
-
-function SummaryRow({ label, value, isDark }: { label: string; value: string; isDark: boolean }) {
-  return (
-    <View style={styles.summaryRow}>
-      <Text style={[styles.summaryLabel, isDark && styles.textSecDark]}>{label}</Text>
-      <Text style={[styles.summaryValue, isDark && styles.textPrimaryDark]} numberOfLines={1}>{value}</Text>
-    </View>
-  );
-}
-
 // ─── ProfileScreen ──────────────────────────────────────────────────────────────
 
 export default function ProfileScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDark = useColorScheme() === 'dark';
   const { user, signOut } = useAuth();
   const { profile, saveProfile } = useProfile();
-  const { isAvailable: healthAvailable, isConnected: healthConnected, connect: connectHealth, disconnect: disconnectHealth } = useHealthData();
+  const {
+    isAvailable: healthAvailable, isConnected: healthConnected, isLoading: healthLoading,
+    connect: connectHealth, disconnect: disconnectHealth,
+  } = useHealthData();
   const { medications, isLoading: medsLoading, addMedication, updateMedication, deleteMedication } = useMedications();
   const { tracks: tracksMedication, setTracks: setTracksMedication } = useMedicationTracking();
   const { isSubscribed, isLoading: subLoading, monthlyPrice, trialDays, purchase, restore } = useSubscription();
 
+  const bg = isDark ? Colors.backgroundDark : Colors.background;
+  const cardBg = isDark ? Colors.surfaceDark : Colors.surface;
+  const cardBorder = isDark ? Colors.borderDark : Colors.border;
+  const textPrimary = isDark ? Colors.textPrimaryDark : Colors.textPrimary;
+  const textSecondary = isDark ? Colors.textSecondaryDark : Colors.textSecondary;
+  const inputBg = isDark ? Colors.backgroundDark : Colors.background;
+
+  const version = Constants.expoConfig?.version ?? '1.0.0';
+
   const [showEditModal, setShowEditModal] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState(profile?.preferred_name ?? '');
+  const [editingAiContext, setEditingAiContext] = useState(false);
+  const [aiContext, setAiContext] = useState(profile?.ai_context ?? '');
+  const [isSavingAiContext, setIsSavingAiContext] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
-  const [isTogglingHealth, setIsTogglingHealth] = useState(false);
   const [showAddMed, setShowAddMed] = useState(false);
   const [editingMed, setEditingMed] = useState<MedicationReminder | null>(null);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [aiConsented, setAiConsented] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    getAiConsent().then(setAiConsented);
-  }, []);
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [reportFromDate, setReportFromDate] = useState('');
+  const [showReportDatePicker, setShowReportDatePicker] = useState(false);
+  const [pendingReportDate, setPendingReportDate] = useState('');
+
+  useEffect(() => { getAiConsent().then(setAiConsented); }, []);
+  useEffect(() => { setNameValue(profile?.preferred_name ?? ''); }, [profile?.preferred_name]);
+  useEffect(() => { if (profile?.ai_context) setAiContext(profile.ai_context); }, [profile?.ai_context]);
 
   const handlePurchase = useCallback(async () => {
     setIsPurchasing(true);
@@ -623,11 +621,7 @@ export default function ProfileScreen() {
         text: t('profile.medications.remove_btn'),
         style: 'destructive',
         onPress: async () => {
-          try {
-            await deleteMedication(id);
-          } catch (err) {
-            console.error('Delete medication error:', err);
-          }
+          try { await deleteMedication(id); } catch (err) { console.error('Delete medication error:', err); }
         },
       },
     ]);
@@ -667,23 +661,42 @@ export default function ProfileScreen() {
     if (notificationsEnabled) await scheduleDailyCheckIn(timeString);
   };
 
-  const handleToggleAiConsent = async (value: boolean) => {
-    setAiConsented(value);
-    await setAiConsent(value);
-  };
+  const handleToggleAiConsent = useCallback((value: boolean) => {
+    if (value) {
+      Alert.alert(
+        t('profile_privacy.ai_consent_alert_title'),
+        t('profile_privacy.ai_consent_alert_body'),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          {
+            text: t('profile_privacy.ai_consent_alert_agree'),
+            onPress: () => { setAiConsent(true); setAiConsented(true); },
+          },
+        ]
+      );
+    } else {
+      setAiConsent(false);
+      setAiConsented(false);
+    }
+  }, [t]);
 
   const handleToggleHealth = async (value: boolean) => {
-    setIsTogglingHealth(true);
-    try {
-      if (value) {
-        await connectHealth();
-      } else {
-        await disconnectHealth();
-      }
-    } finally {
-      setIsTogglingHealth(false);
-    }
+    if (value) await connectHealth();
+    else await disconnectHealth();
   };
+
+  const handleSaveAiContext = useCallback(async () => {
+    setIsSavingAiContext(true);
+    try {
+      await saveProfile({ ai_context: aiContext });
+      setEditingAiContext(false);
+    } catch (err) {
+      console.error('Save AI context error:', err);
+      Alert.alert(t('common.error'), t('profile.error_save'));
+    } finally {
+      setIsSavingAiContext(false);
+    }
+  }, [aiContext, saveProfile, t]);
 
   const handleSignOut = () => {
     Alert.alert(t('profile.sign_out_confirm_title'), '', [
@@ -693,223 +706,554 @@ export default function ProfileScreen() {
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(t('profile.delete_account_confirm_title'), t('profile.delete_account_confirm_body'), [
+    Alert.alert(t('profile.delete_all_title'), t('profile.delete_all_body'), [
       { text: t('common.cancel'), style: 'cancel' },
       {
-        text: t('profile.delete_account'),
+        text: t('profile.delete_everything'),
         style: 'destructive',
-        onPress: async () => {
-          if (!user) return;
-          setIsDeletingAccount(true);
-          try {
-            await deleteAllUserData(user.id);
-            await signOut();
-          } catch (err) {
-            console.error('Delete account error:', err);
-            Alert.alert(t('common.error'), t('profile.error_delete_account'));
-          } finally {
-            setIsDeletingAccount(false);
-          }
+        onPress: () => {
+          Alert.alert(t('profile.delete_confirm_title'), t('profile.delete_confirm_body'), [
+            { text: t('common.cancel'), style: 'cancel' },
+            {
+              text: t('profile.delete_confirm_cta'),
+              style: 'destructive',
+              onPress: async () => {
+                if (!user) return;
+                setIsDeletingAccount(true);
+                try {
+                  await deleteAllUserData(user.id);
+                  await signOut();
+                } catch (err) {
+                  console.error('Delete account error:', err);
+                  Alert.alert(t('common.error'), t('profile.error_delete_account'));
+                } finally {
+                  setIsDeletingAccount(false);
+                }
+              },
+            },
+          ]);
         },
       },
     ]);
   };
 
-  const labelOrNotSet = (key: string | null, ns: string): string => (key ? t(`onboarding.${ns}.${key}`) : t('profile.not_set'));
-  const listOrNotSet = (arr: string[] | undefined, ns: string): string =>
-    arr && arr.length > 0 ? arr.map((v) => t(`onboarding.${ns}.${v}`)).join(', ') : t('profile.not_set');
+  const isEmailAuth = user?.app_metadata?.provider === 'email' ||
+    user?.identities?.some((i: { provider: string }) => i.provider === 'email');
+
+  const handleChangeEmail = useCallback(() => {
+    Alert.prompt(
+      t('common.change_email'),
+      t('common.enter_new_email'),
+      async (newEmail) => {
+        if (!newEmail?.trim()) return;
+        const { error } = await supabase.auth.updateUser({ email: newEmail.trim() });
+        if (error) Alert.alert(t('common.error'), t('profile.error_update_email'));
+        else Alert.alert('', t('profile.confirm_email_change'));
+      },
+      'plain-text',
+      user?.email ?? ''
+    );
+  }, [user?.email, t]);
+
+  const handleChangePassword = useCallback(() => {
+    Alert.prompt(
+      t('common.new_password'),
+      t('common.password_hint'),
+      async (newPassword) => {
+        if (!newPassword || newPassword.length < 8) {
+          Alert.alert('', t('profile.error_password_short'));
+          return;
+        }
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        if (error) Alert.alert(t('common.error'), t('profile.error_update_password'));
+        else Alert.alert('', t('profile.password_updated'));
+      },
+      'secure-text'
+    );
+  }, [t]);
+
+  const handleSendFeedback = useCallback(() => {
+    if (!feedbackText.trim()) return;
+    const subject = encodeURIComponent('Mya Feedback');
+    const body = encodeURIComponent(feedbackText.trim() + (user?.email ? `\n\n- ${user.email}` : ''));
+    Linking.openURL(`mailto:joseph.brockbank@gmail.com?subject=${subject}&body=${body}`);
+    setFeedbackText('');
+    setShowFeedback(false);
+  }, [feedbackText, user?.email]);
+
+  const handleGenerateReport = useCallback(async () => {
+    if (!user || !profile) return;
+    setIsGeneratingReport(true);
+    try {
+      const daysBack = reportFromDate
+        ? Math.ceil((Date.now() - new Date(reportFromDate + 'T00:00:00').getTime()) / 86400000) + 1
+        : 365;
+      const [logs, crashes, envelopes, dsqSfScores] = await Promise.all([
+        getDailyLogs(user.id, daysBack),
+        getCrashes(user.id, 200),
+        getDailyEnvelopes(user.id, daysBack),
+        getDsqSfScores(user.id, 50),
+      ]);
+      await generateAndShareReport({
+        logs,
+        crashes,
+        envelopes,
+        medications,
+        profile,
+        dsqSfScores,
+        fromDate: reportFromDate || undefined,
+      });
+    } catch (err) {
+      console.error('Generate report error:', err);
+      Alert.alert('', t('profile.error_save'));
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  }, [user, profile, medications, reportFromDate, t]);
 
   return (
-    <SafeAreaView style={[styles.screen, isDark && styles.screenDark]}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{(user?.email ?? 'U').charAt(0).toUpperCase()}</Text>
-          </View>
-          <Text style={[styles.email, isDark && styles.textPrimaryDark]} numberOfLines={1}>{user?.email}</Text>
-        </View>
+    <SafeAreaView style={[styles.screen, { backgroundColor: bg }]}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
-        {!subLoading && (
-          isSubscribed ? (
-            <View style={[styles.section, { borderColor: Colors.primary }]}>
-              <View style={styles.rowBetween}>
-                <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('subscription.already_subscribed')}</Text>
-                <View style={styles.premiumBadge}>
-                  <Text style={styles.premiumBadgeText}>PREMIUM</Text>
-                </View>
-              </View>
-              <TouchableOpacity onPress={handleManageSubscription} activeOpacity={0.8}>
-                <Text style={styles.editLink}>{t('subscription.manage')}</Text>
+          {/* ── User header ─────────────────────────────────────────────────── */}
+          <View style={styles.profileHeader}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{(nameValue || user?.email)?.charAt(0).toUpperCase() ?? 'U'}</Text>
+            </View>
+            {editingName ? (
+              <TextInput
+                style={[styles.nameInput, { color: textPrimary, borderColor: Colors.primary }]}
+                value={nameValue}
+                onChangeText={setNameValue}
+                placeholder={t('profile.first_name_placeholder')}
+                placeholderTextColor={textSecondary}
+                autoFocus
+                returnKeyType="done"
+                onSubmitEditing={async () => {
+                  setEditingName(false);
+                  try { await saveProfile({ preferred_name: nameValue.trim() || null }); }
+                  catch { Alert.alert(t('common.error'), t('profile.error_save_name')); }
+                }}
+                onBlur={async () => {
+                  setEditingName(false);
+                  try { await saveProfile({ preferred_name: nameValue.trim() || null }); }
+                  catch { Alert.alert(t('common.error'), t('profile.error_save_name')); }
+                }}
+              />
+            ) : (
+              <TouchableOpacity onPress={() => setEditingName(true)} activeOpacity={0.7}>
+                <Text style={[styles.nameDisplay, { color: nameValue ? textPrimary : textSecondary }]}>
+                  {nameValue || t('profile.add_your_name')}
+                </Text>
               </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity
-              onPress={() => setShowPremiumModal(true)}
-              activeOpacity={0.85}
-              style={[styles.section, styles.premiumTeaser, isDark && styles.sectionDark, { borderColor: Colors.primary + '50' }]}
-            >
-              <View style={styles.premiumTeaserRow}>
-                <View style={{ flex: 1, gap: 4 }}>
-                  <View style={styles.premiumBadge}>
-                    <Text style={styles.premiumBadgeText}>PREMIUM</Text>
-                  </View>
-                  <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('premium_modal.header_title')}</Text>
-                  <Text style={[styles.hint, isDark && styles.textSecDark]}>
-                    {monthlyPrice && trialDays
-                      ? t('premium_modal.after_trial', { days: trialDays, price: monthlyPrice })
-                      : t('premium_modal.header_subtitle')}
-                  </Text>
-                </View>
-                <Text style={{ fontSize: FontSize.lg, color: Colors.primary }}>›</Text>
-              </View>
-            </TouchableOpacity>
-          )
-        )}
-
-        <View style={[styles.section, isDark && styles.sectionDark]}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('profile.section_your_profile')}</Text>
-            <TouchableOpacity onPress={() => setShowEditModal(true)}>
-              <Text style={styles.editLink}>{t('profile.edit')}</Text>
-            </TouchableOpacity>
-          </View>
-          <SummaryRow isDark={isDark} label={t('profile.field_diagnosis_criteria')} value={labelOrNotSet(profile?.diagnosis_criteria ?? null, 'diagnosis_criteria')} />
-          <SummaryRow isDark={isDark} label={t('profile.field_diagnosis_years')} value={labelOrNotSet(profile?.diagnosis_years ?? null, 'diagnosis_years')} />
-          <SummaryRow isDark={isDark} label={t('profile.field_bell_baseline')} value={profile?.bell_score_baseline !== null && profile?.bell_score_baseline !== undefined ? String(profile.bell_score_baseline) : t('profile.not_set')} />
-          <SummaryRow isDark={isDark} label={t('profile.field_pem_onset_delay')} value={labelOrNotSet(profile?.pem_onset_delay ?? null, 'pem_onset_delay')} />
-          <SummaryRow isDark={isDark} label={t('profile.field_pem_duration')} value={labelOrNotSet(profile?.pem_duration_typical ?? null, 'pem_duration_typical')} />
-          <SummaryRow isDark={isDark} label={t('profile.field_mobility_status')} value={labelOrNotSet(profile?.mobility_status ?? null, 'mobility_status')} />
-          <SummaryRow isDark={isDark} label={t('profile.field_primary_symptoms')} value={listOrNotSet(profile?.primary_symptoms, 'primary_symptoms')} />
-          <SummaryRow isDark={isDark} label={t('profile.field_comorbidities')} value={listOrNotSet(profile?.comorbidities, 'comorbidities')} />
-          <SummaryRow isDark={isDark} label={t('profile.field_medications')} value={listOrNotSet(profile?.medications, 'medications')} />
-        </View>
-
-        <View style={[styles.section, isDark && styles.sectionDark]}>
-          <View style={styles.rowBetween}>
-            <View style={styles.rowTextGroup}>
-              <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('profile.medications.section_title')}</Text>
-              <Text style={[styles.hint, isDark && styles.textSecDark]}>
-                {tracksMedication ? t('profile.medications.tracking_on') : t('profile.medications.tracking_off')}
-              </Text>
-            </View>
-            <Switch value={tracksMedication} onValueChange={setTracksMedication} trackColor={{ true: Colors.primary }} />
+            )}
+            <Text style={[styles.emailText, { color: textSecondary }]}>{user?.email ?? ''}</Text>
           </View>
 
-          {tracksMedication && (
-            <View style={styles.rowBetween}>
-              <Text style={[styles.editFieldLabel, isDark && styles.textSecDark, { marginTop: 0 }]}>{t('profile.medications.doses_per_day')}</Text>
-              <View style={styles.medChipsRow}>
-                {[1, 2, 3].map((n) => (
-                  <TouchableOpacity
-                    key={n}
-                    onPress={() => handleSetMedicationDosesPerDay(n)}
-                    activeOpacity={0.8}
-                    style={[
-                      styles.medDoseChip,
-                      { backgroundColor: medicationDosesPerDay === n ? Colors.primary : 'transparent', borderColor: medicationDosesPerDay === n ? Colors.primary : (isDark ? Colors.borderDark : Colors.border) },
-                    ]}
-                  >
-                    <Text style={[styles.medChipText, { color: medicationDosesPerDay === n ? '#FFFFFF' : (isDark ? Colors.textSecondaryDark : Colors.textSecondary) }]}>{n}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
+          {/* ── Profile ─────────────────────────────────────────────────────── */}
+          <View style={[styles.settingsCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+            <TouchableOpacity style={styles.settingsRow} onPress={() => setShowEditModal(true)} activeOpacity={0.7}>
+              <Text style={[styles.settingsRowLabel, { color: textPrimary }]}>{t('profile.edit_title')}</Text>
+              <Text style={[styles.chevron, { color: textSecondary }]}>›</Text>
+            </TouchableOpacity>
 
-          {medsLoading ? (
-            <ActivityIndicator color={Colors.primary} style={{ marginVertical: Spacing.sm }} />
-          ) : (
-            medications.map((med) => (
-              <TouchableOpacity key={med.id} style={styles.medListRow} onPress={() => { setEditingMed(med); setShowAddMed(true); }} activeOpacity={0.7}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.medName, isDark && styles.textPrimaryDark]}>{med.name}</Text>
-                  <View style={styles.medMetaRow}>
-                    {med.dose ? <Text style={[styles.medDose, isDark && styles.textSecDark]}>{med.dose}</Text> : null}
-                    {med.as_needed ? (
-                      <Text style={[styles.medFreqBadge, { color: Colors.warning }]}>{t('profile.medications.as_needed')}</Text>
-                    ) : (
-                      <Text style={[styles.medFreqBadge, isDark && styles.textSecDark]}>{freqLabel(med.frequency)} · {med.reminder_time}</Text>
+            {isSubscribed && (
+              <>
+                <View style={[styles.rowDivider, { backgroundColor: cardBorder }]} />
+                <TouchableOpacity style={styles.settingsRow} onPress={() => setEditingAiContext(!editingAiContext)} activeOpacity={0.7}>
+                  <View style={styles.settingsRowLeft}>
+                    <Text style={[styles.settingsRowLabel, { color: textPrimary }]}>{t('profile.about_me')}</Text>
+                    {!editingAiContext && (
+                      <Text style={[styles.settingsRowSub, { color: textSecondary }]} numberOfLines={1}>
+                        {aiContext || t('profile.about_me_placeholder')}
+                      </Text>
                     )}
                   </View>
-                </View>
-                <TouchableOpacity onPress={() => handleDeleteMed(med.id!, med.name)} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Text style={styles.medDeleteIcon}>✕</Text>
+                  {!editingAiContext && <Text style={[styles.chevron, { color: textSecondary }]}>›</Text>}
                 </TouchableOpacity>
-              </TouchableOpacity>
-            ))
-          )}
+              </>
+            )}
 
-          {tracksMedication && (
-            <>
-              <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('profile.medications.add_hint')}</Text>
-              <TouchableOpacity onPress={() => { setEditingMed(null); setShowAddMed(true); }} activeOpacity={0.7}>
-                <Text style={styles.editLink}>{t('profile.medications.add_btn')}</Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
-
-        <View style={[styles.section, isDark && styles.sectionDark]}>
-          <View style={styles.rowBetween}>
-            <View style={styles.rowTextGroup}>
-              <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('profile.section_reminders')}</Text>
-              <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('profile.reminder_hint')}</Text>
-            </View>
-            <Switch value={notificationsEnabled} onValueChange={handleToggleNotifications} trackColor={{ true: Colors.primary }} />
-          </View>
-          {notificationsEnabled && (
-            <TouchableOpacity onPress={() => setShowTimePicker(true)} style={styles.timeRow}>
-              <Text style={styles.editLink}>{t('profile.reminder_time', { time: notificationTime })}</Text>
-            </TouchableOpacity>
-          )}
-          {showTimePicker && (
-            <DateTimePicker value={timeToDate(notificationTime)} mode="time" display="spinner" onChange={handleTimeChange} />
-          )}
-        </View>
-
-        <View style={[styles.section, isDark && styles.sectionDark]}>
-          <View style={styles.rowBetween}>
-            <View style={styles.rowTextGroup}>
-              <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('profile.section_health')}</Text>
-              <Text style={[styles.hint, isDark && styles.textSecDark]}>
-                {healthAvailable ? t('profile.health_hint') : t('profile.health_unavailable')}
-              </Text>
-            </View>
-            {healthAvailable && (
-              isTogglingHealth
-                ? <ActivityIndicator color={Colors.primary} />
-                : <Switch value={healthConnected} onValueChange={handleToggleHealth} trackColor={{ true: Colors.primary }} />
+            {editingAiContext && (
+              <View style={styles.aiContextExpanded}>
+                <TextInput
+                  style={[styles.aiContextInput, { backgroundColor: inputBg, borderColor: Colors.primary, color: textPrimary }]}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                  placeholder={t('profile.ai_context_placeholder')}
+                  placeholderTextColor={textSecondary}
+                  value={aiContext}
+                  onChangeText={setAiContext}
+                  autoFocus
+                />
+                <Text style={[styles.helperText, { color: textSecondary }]}>{t('profile.ai_context_helper')}</Text>
+                <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+                  <TouchableOpacity
+                    onPress={() => { setAiContext(profile?.ai_context ?? ''); setEditingAiContext(false); }}
+                    activeOpacity={0.8}
+                    style={[styles.cancelContextBtn, { borderColor: cardBorder }]}
+                  >
+                    <Text style={[styles.cancelContextText, { color: textSecondary }]}>{t('common.cancel')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleSaveAiContext}
+                    disabled={isSavingAiContext}
+                    activeOpacity={0.8}
+                    style={[styles.saveContextBtn, { flex: 2, opacity: isSavingAiContext ? 0.6 : 1 }]}
+                  >
+                    {isSavingAiContext ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.saveContextText}>{t('profile.save_ai_context')}</Text>}
+                  </TouchableOpacity>
+                </View>
+              </View>
             )}
           </View>
-        </View>
 
-        <View style={[styles.section, isDark && styles.sectionDark]}>
-          <View style={styles.rowBetween}>
-            <View style={styles.rowTextGroup}>
-              <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('profile.ai_data_sharing')}</Text>
-              <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('profile.ai_data_sharing_hint')}</Text>
+          {/* ── Subscription ────────────────────────────────────────────────── */}
+          {!subLoading && (
+            isSubscribed ? (
+              <View style={[styles.settingsCard, { backgroundColor: cardBg, borderColor: Colors.primary }]}>
+                <View style={[styles.settingsRow, { paddingRight: Spacing.md }]}>
+                  <Text style={[styles.settingsRowLabel, { color: textPrimary, fontSize: FontSize.md }]}>{t('subscription.already_subscribed')}</Text>
+                  <View style={styles.premiumBadge}>
+                    <Text style={styles.premiumBadgeText}>{t('common.premium')}</Text>
+                  </View>
+                </View>
+                <View style={[styles.rowDivider, { backgroundColor: Colors.primary + '30' }]} />
+                <TouchableOpacity onPress={handleManageSubscription} activeOpacity={0.8} style={styles.settingsRow}>
+                  <Text style={[styles.settingsRowLabel, { color: Colors.primary }]}>{t('subscription.manage')}</Text>
+                  <Text style={[styles.chevron, { color: Colors.primary }]}>›</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={() => setShowPremiumModal(true)}
+                activeOpacity={0.85}
+                style={[styles.card, styles.premiumTeaser, { backgroundColor: cardBg, borderColor: Colors.primary + '50' }]}
+              >
+                <View style={styles.premiumTeaserRow}>
+                  <View style={styles.premiumTeaserLeft}>
+                    <View style={styles.premiumBadge}>
+                      <Text style={styles.premiumBadgeText}>{t('common.premium')}</Text>
+                    </View>
+                    <Text style={[styles.premiumTeaserTitle, { color: textPrimary }]}>{t('premium_modal.header_title')}</Text>
+                    <Text style={[styles.premiumTeaserBody, { color: textSecondary }]}>
+                      {monthlyPrice && trialDays
+                        ? t('premium_modal.after_trial', { days: trialDays, price: monthlyPrice })
+                        : t('premium_modal.header_subtitle')}
+                    </Text>
+                  </View>
+                  <Text style={[styles.premiumTeaserArrow, { color: Colors.primary }]}>→</Text>
+                </View>
+              </TouchableOpacity>
+            )
+          )}
+
+          {/* ── Notifications & Medications ─────────────────────────────────── */}
+          <Text style={[styles.sectionLabel, { color: textSecondary }]}>{t('profile.notifications')}</Text>
+          <View style={[styles.settingsCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+            <View style={[styles.settingsRow, { paddingRight: Spacing.md }]}>
+              <Text style={[styles.settingsRowLabel, { color: textPrimary }]}>{t('profile.daily_reminder')}</Text>
+              <Switch value={notificationsEnabled} onValueChange={handleToggleNotifications} trackColor={{ true: Colors.primary, false: cardBorder }} thumbColor="#FFFFFF" />
             </View>
-            {aiConsented === null
-              ? <ActivityIndicator color={Colors.primary} />
-              : <Switch value={aiConsented} onValueChange={handleToggleAiConsent} trackColor={{ true: Colors.primary }} />}
+
+            {notificationsEnabled && !showTimePicker && (
+              <>
+                <View style={[styles.rowDivider, { backgroundColor: cardBorder }]} />
+                <TouchableOpacity onPress={() => setShowTimePicker(true)} activeOpacity={0.7} style={styles.settingsRow}>
+                  <Text style={[styles.settingsRowLabel, { color: textPrimary }]}>{t('profile.medications.reminder_time')}</Text>
+                  <Text style={[styles.settingsRowValue, { color: Colors.primary }]}>{notificationTime} ›</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {notificationsEnabled && showTimePicker && (
+              <View style={{ paddingHorizontal: Spacing.md, paddingBottom: Spacing.sm }}>
+                <DateTimePicker value={timeToDate(notificationTime)} mode="time" display="spinner" onChange={handleTimeChange} textColor={textPrimary} style={{ width: '100%', height: 150 }} />
+              </View>
+            )}
+
+            <View style={[styles.rowDivider, { backgroundColor: cardBorder }]} />
+
+            <View style={[styles.settingsRow, { paddingRight: Spacing.md }]}>
+              <View style={styles.settingsRowLeft}>
+                <Text style={[styles.settingsRowLabel, { color: textPrimary }]}>{t('profile.medications.tracking_toggle_label')}</Text>
+                <Text style={[styles.settingsRowSub, { color: textSecondary }]}>
+                  {tracksMedication ? t('profile.medications.tracking_shown') : t('profile.medications.tracking_hidden')}
+                </Text>
+              </View>
+              <Switch value={tracksMedication} onValueChange={setTracksMedication} trackColor={{ true: Colors.primary, false: cardBorder }} thumbColor="#FFFFFF" />
+            </View>
+
+            {tracksMedication && (
+              <>
+                <View style={[styles.rowDivider, { backgroundColor: cardBorder }]} />
+                <View style={styles.settingsRow}>
+                  <View style={styles.settingsRowLeft}>
+                    <Text style={[styles.settingsRowLabel, { color: textPrimary }]}>{t('profile.medications.doses_per_day')}</Text>
+                  </View>
+                  <View style={styles.chipsRow}>
+                    {[1, 2, 3].map((n) => (
+                      <TouchableOpacity
+                        key={n}
+                        onPress={() => handleSetMedicationDosesPerDay(n)}
+                        activeOpacity={0.8}
+                        style={[styles.chip, { backgroundColor: medicationDosesPerDay === n ? Colors.primary : cardBg, borderColor: medicationDosesPerDay === n ? Colors.primary : cardBorder }]}
+                      >
+                        <Text style={[styles.chipText, { color: medicationDosesPerDay === n ? '#FFFFFF' : textSecondary }]}>{n}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </>
+            )}
+
+            {medsLoading ? (
+              <ActivityIndicator color={Colors.primary} style={{ marginVertical: Spacing.md }} />
+            ) : (
+              medications.map((med) => (
+                <React.Fragment key={med.id}>
+                  <View style={[styles.rowDivider, { backgroundColor: cardBorder }]} />
+                  <TouchableOpacity style={styles.medListRow} onPress={() => { setEditingMed(med); setShowAddMed(true); }} activeOpacity={0.7}>
+                    <View style={styles.medInfo}>
+                      <Text style={[styles.medName, { color: textPrimary }]}>{med.name}</Text>
+                      <View style={styles.medMeta}>
+                        {med.dose ? <Text style={[styles.medDose, { color: textSecondary }]}>{med.dose}</Text> : null}
+                        {med.as_needed ? (
+                          <View style={[styles.freqBadge, { backgroundColor: Colors.warning + '20' }]}>
+                            <Text style={[styles.freqBadgeText, { color: Colors.warning }]}>{t('profile.medications.as_needed')}</Text>
+                          </View>
+                        ) : (
+                          <>
+                            <View style={styles.freqBadge}>
+                              <Text style={styles.freqBadgeText}>{freqLabel(med.frequency)}</Text>
+                            </View>
+                            <Text style={[styles.medTime, { color: textSecondary }]}>{med.reminder_time}</Text>
+                          </>
+                        )}
+                      </View>
+                    </View>
+                    <TouchableOpacity onPress={() => handleDeleteMed(med.id!, med.name)} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <Text style={styles.deleteIcon}>✕</Text>
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                </React.Fragment>
+              ))
+            )}
+
+            {tracksMedication && (
+              <>
+                <View style={[styles.rowDivider, { backgroundColor: cardBorder }]} />
+                <TouchableOpacity onPress={() => { setEditingMed(null); setShowAddMed(true); }} activeOpacity={0.7} style={styles.settingsRow}>
+                  <Text style={[styles.settingsRowLabel, { color: Colors.primary }]}>+ {t('profile.medications.add_btn')}</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
-        </View>
 
-        <View style={[styles.section, isDark && styles.sectionDark]}>
-          <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('profile.section_account')}</Text>
-          <Button label={t('profile.sign_out')} onPress={handleSignOut} variant="secondary" />
-          <Button
-            label={isDeletingAccount ? t('profile.deleting') : t('profile.delete_account')}
-            onPress={handleDeleteAccount}
-            variant="outline"
-            isLoading={isDeletingAccount}
-            style={styles.deleteButton}
-            textStyle={{ color: Colors.error }}
-          />
-        </View>
+          {/* ── Health data ──────────────────────────────────────────────────── */}
+          {healthAvailable && (
+            <>
+              <Text style={[styles.sectionLabel, { color: textSecondary }]}>{t('profile.health_data')}</Text>
+              <View style={[styles.settingsCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+                <View style={[styles.settingsRow, { paddingRight: Spacing.md }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+                    <Text style={[styles.settingsRowLabel, { color: textPrimary }]}>
+                      {Platform.OS === 'ios' ? t('profile.apple_health_label') : t('profile.health_connect_label')}
+                    </Text>
+                    <InfoButton
+                      title={Platform.OS === 'ios' ? t('profile.apple_health_label') : t('profile.health_connect_label')}
+                      message={Platform.OS === 'ios' ? t('profile.apple_health_info_message') : t('profile.health_connect_info_message')}
+                      color={textSecondary}
+                    />
+                  </View>
+                  {healthLoading ? (
+                    <ActivityIndicator color={Colors.primary} size="small" />
+                  ) : (
+                    <Switch value={healthConnected} onValueChange={handleToggleHealth} trackColor={{ true: Colors.primary, false: cardBorder }} thumbColor="#FFFFFF" />
+                  )}
+                </View>
+              </View>
+            </>
+          )}
 
-        <View style={styles.bottomPad} />
-      </ScrollView>
+          {/* ── Treatment ───────────────────────────────────────────────────── */}
+          <Text style={[styles.sectionLabel, { color: textSecondary }]}>{t('profile.treatment')}</Text>
+          <View style={[styles.settingsCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+            <View style={[styles.settingsRow, { paddingRight: Spacing.md }]}>
+              <Text style={[styles.settingsRowLabel, { color: textPrimary }]}>{t('profile.share_report_title')}</Text>
+              <InfoButton title={t('profile.report_info_title')} message={t('profile.report_info_message')} color={textSecondary} />
+            </View>
+            <View style={[styles.rowDivider, { backgroundColor: cardBorder }]} />
+            {!showReportDatePicker ? (
+              <TouchableOpacity
+                onPress={() => { setPendingReportDate(reportFromDate); setShowReportDatePicker(true); }}
+                activeOpacity={0.7}
+                style={styles.settingsRow}
+              >
+                <Text style={[styles.settingsRowSub, { color: textSecondary }]}>{t('profile.from_last_appointment')}</Text>
+                <Text style={[styles.reportDateValue, { color: reportFromDate ? textPrimary : Colors.primary }]}>
+                  {reportFromDate
+                    ? new Date(reportFromDate + 'T12:00:00').toLocaleDateString(i18n.language, { day: 'numeric', month: 'short', year: 'numeric' })
+                    : t('profile.last_12_months')} ›
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={{ paddingHorizontal: Spacing.md, paddingBottom: Spacing.sm }}>
+                <DateTimePicker
+                  value={pendingReportDate ? new Date(pendingReportDate + 'T12:00:00') : new Date()}
+                  mode="date"
+                  display="spinner"
+                  maximumDate={new Date()}
+                  onChange={(_event, date) => {
+                    if (date) {
+                      const y = date.getFullYear();
+                      const m = String(date.getMonth() + 1).padStart(2, '0');
+                      const d = String(date.getDate()).padStart(2, '0');
+                      setPendingReportDate(`${y}-${m}-${d}`);
+                    }
+                  }}
+                  textColor={textPrimary}
+                  style={{ width: '100%', height: 150 }}
+                />
+                <View style={styles.timePickerActions}>
+                  <TouchableOpacity onPress={() => setShowReportDatePicker(false)} style={[styles.timePickerCancel, { borderColor: cardBorder }]} activeOpacity={0.8}>
+                    <Text style={{ color: textSecondary, fontWeight: '500', fontFamily: FontFamily.medium }}>{t('common.cancel')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => { setReportFromDate(pendingReportDate); setShowReportDatePicker(false); }} style={styles.timePickerSave} activeOpacity={0.8}>
+                    <Text style={{ color: '#FFFFFF', fontWeight: '600', fontFamily: FontFamily.semiBold }}>{t('common.set')}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            <View style={[styles.rowDivider, { backgroundColor: cardBorder }]} />
+            <TouchableOpacity onPress={handleGenerateReport} disabled={isGeneratingReport} activeOpacity={0.8} style={[styles.settingsRow, { opacity: isGeneratingReport ? 0.6 : 1 }]}>
+              {isGeneratingReport ? (
+                <View style={styles.reportBtnRow}>
+                  <ActivityIndicator color={Colors.primary} size="small" />
+                  <Text style={[styles.settingsRowLabel, { color: Colors.primary }]}>{t('profile.share_report_generating')}</Text>
+                </View>
+              ) : (
+                <>
+                  <Text style={[styles.settingsRowLabel, { color: Colors.primary }]}>{t('profile.share_report_cta')}</Text>
+                  <Text style={[styles.chevron, { color: Colors.primary }]}>›</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* ── Account ─────────────────────────────────────────────────────── */}
+          <Text style={[styles.sectionLabel, { color: textSecondary }]}>{t('profile.account')}</Text>
+          <View style={[styles.settingsCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+            <TouchableOpacity style={styles.settingsRow} onPress={() => setShowFeedback(true)} activeOpacity={0.7}>
+              <View style={styles.settingsRowLeft}>
+                <Text style={[styles.settingsRowLabel, { color: textPrimary }]}>{t('profile.share_feedback_title')}</Text>
+                <Text style={[styles.settingsRowSub, { color: textSecondary }]}>{t('profile.feedback_row_subtitle')}</Text>
+              </View>
+              <Text style={[styles.chevron, { color: textSecondary }]}>›</Text>
+            </TouchableOpacity>
+
+            <View style={[styles.rowDivider, { backgroundColor: cardBorder }]} />
+
+            <TouchableOpacity style={styles.settingsRow} onPress={handleChangeEmail} activeOpacity={0.7}>
+              <View style={styles.settingsRowLeft}>
+                <Text style={[styles.settingsRowLabel, { color: textPrimary }]}>{t('common.email')}</Text>
+                <Text style={[styles.settingsRowSub, { color: textSecondary }]} numberOfLines={1}>{user?.email}</Text>
+              </View>
+              <Text style={[styles.settingsRowValue, { color: Colors.primary }]}>{t('common.change')}</Text>
+            </TouchableOpacity>
+
+            {isEmailAuth && (
+              <>
+                <View style={[styles.rowDivider, { backgroundColor: cardBorder }]} />
+                <TouchableOpacity style={styles.settingsRow} onPress={handleChangePassword} activeOpacity={0.7}>
+                  <View style={styles.settingsRowLeft}>
+                    <Text style={[styles.settingsRowLabel, { color: textPrimary }]}>{t('common.password')}</Text>
+                    <Text style={[styles.settingsRowSub, { color: textSecondary }]}>••••••••</Text>
+                  </View>
+                  <Text style={[styles.settingsRowValue, { color: Colors.primary }]}>{t('common.change')}</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            <View style={[styles.rowDivider, { backgroundColor: cardBorder }]} />
+
+            <TouchableOpacity style={styles.settingsRow} onPress={handleSignOut} activeOpacity={0.7}>
+              <Text style={[styles.settingsRowLabel, { color: Colors.error }]}>{t('profile.sign_out')}</Text>
+            </TouchableOpacity>
+
+            <View style={[styles.rowDivider, { backgroundColor: cardBorder }]} />
+
+            <TouchableOpacity style={styles.settingsRow} onPress={handleDeleteAccount} activeOpacity={0.7} disabled={isDeletingAccount}>
+              {isDeletingAccount ? (
+                <ActivityIndicator color={Colors.error} size="small" />
+              ) : (
+                <Text style={[styles.settingsRowLabel, { color: Colors.error, opacity: 0.7 }]}>{t('profile.delete_data_button')}</Text>
+              )}
+            </TouchableOpacity>
+            <Text style={[styles.deleteDataNote, { color: textSecondary, paddingHorizontal: Spacing.md, paddingBottom: Spacing.sm }]}>
+              {t('profile.delete_data_note')}
+            </Text>
+          </View>
+
+          {/* ── AI privacy ──────────────────────────────────────────────────── */}
+          <View style={[styles.settingsCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+            <View style={[styles.settingsRow, { paddingRight: Spacing.md }]}>
+              <View style={styles.settingsRowLeft}>
+                <Text style={[styles.settingsRowLabel, { color: textPrimary }]}>{t('profile_privacy.ai_consent_toggle_label')}</Text>
+                <Text style={[styles.settingsRowSub, { color: textSecondary }]}>{t('profile_privacy.ai_consent_toggle_subtitle')}</Text>
+              </View>
+              {aiConsented === null ? (
+                <ActivityIndicator color={Colors.primary} size="small" />
+              ) : (
+                <Switch value={aiConsented} onValueChange={handleToggleAiConsent} trackColor={{ true: Colors.primary, false: cardBorder }} thumbColor="#FFFFFF" />
+              )}
+            </View>
+            <Text style={[styles.aiPrivacyBody, { color: textSecondary, paddingHorizontal: Spacing.md, paddingBottom: Spacing.xs }]}>{t('profile_privacy.ai_body_1')}</Text>
+            <Text style={[styles.aiPrivacyBody, { color: textSecondary, paddingHorizontal: Spacing.md, paddingBottom: Spacing.md }]}>{t('profile_privacy.ai_body_2')}</Text>
+          </View>
+
+          {/* ── Medical Sources & Disclaimer ─────────────────────────────────── */}
+          <View style={[styles.settingsCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+            <View style={styles.settingsRow}>
+              <Text style={[styles.settingsRowLabel, { color: textPrimary }]}>{t('profile_privacy.sources_title')}</Text>
+            </View>
+            <Text style={[styles.aiPrivacyBody, { color: textSecondary, paddingHorizontal: Spacing.md, paddingBottom: Spacing.sm }]}>{t('profile_privacy.sources_disclaimer')}</Text>
+            <View style={[styles.rowDivider, { backgroundColor: cardBorder }]} />
+            <TouchableOpacity onPress={() => Linking.openURL('https://www.meaction.net')} activeOpacity={0.7} style={styles.settingsRow}>
+              <Text style={[styles.settingsRowLabel, { color: Colors.primary }]}>{t('profile_privacy.sources_meaction')}</Text>
+              <Text style={[styles.chevron, { color: Colors.primary }]}>›</Text>
+            </TouchableOpacity>
+            <View style={[styles.rowDivider, { backgroundColor: cardBorder }]} />
+            <TouchableOpacity onPress={() => Linking.openURL('https://meassociation.org.uk')} activeOpacity={0.7} style={styles.settingsRow}>
+              <Text style={[styles.settingsRowLabel, { color: Colors.primary }]}>{t('profile_privacy.sources_meassociation')}</Text>
+              <Text style={[styles.chevron, { color: Colors.primary }]}>›</Text>
+            </TouchableOpacity>
+            <View style={[styles.rowDivider, { backgroundColor: cardBorder }]} />
+            <View style={[styles.settingsRow, { minHeight: undefined, paddingVertical: Spacing.sm }]}>
+              <Text style={[styles.settingsRowSub, { color: textSecondary, flex: 1 }]}>{t('profile_privacy.sources_dsq_sf')}</Text>
+            </View>
+          </View>
+
+          {/* Privacy policy + version */}
+          <TouchableOpacity onPress={() => Linking.openURL(getPrivacyPolicyUrl()).catch(() => {})} activeOpacity={0.7} style={styles.privacyLink}>
+            <Text style={[styles.privacyLinkText, { color: textSecondary }]}>{t('subscription.privacy_policy')}</Text>
+          </TouchableOpacity>
+          <Text style={[styles.version, { color: textSecondary }]}>v{version}</Text>
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      <AddMedicationModal
+        visible={showAddMed}
+        onClose={() => { setShowAddMed(false); setEditingMed(null); }}
+        onSave={addMedication}
+        onUpdate={updateMedication}
+        onOpenEditProfile={() => setShowEditModal(true)}
+        editingMed={editingMed}
+        isDark={isDark}
+        profileMeds={profile?.medications}
+      />
 
       <ProfileEditModal
         visible={showEditModal}
@@ -928,20 +1272,8 @@ export default function ProfileScreen() {
           comorbidities: profile?.comorbidities ?? [],
           medications: profile?.medications ?? [],
           challenges: profile?.challenges ?? [],
-          ai_context: profile?.ai_context ?? '',
         }}
         onSave={async (updates) => { await saveProfile(updates); }}
-      />
-
-      <AddMedicationModal
-        visible={showAddMed}
-        onClose={() => { setShowAddMed(false); setEditingMed(null); }}
-        onSave={addMedication}
-        onUpdate={updateMedication}
-        onOpenEditProfile={() => setShowEditModal(true)}
-        editingMed={editingMed}
-        isDark={isDark}
-        profileMeds={profile?.medications}
       />
 
       <PremiumModal
@@ -955,63 +1287,111 @@ export default function ProfileScreen() {
         isRestoring={isRestoring}
         isDark={isDark}
       />
+
+      <Modal visible={showFeedback} animationType="slide" transparent onRequestClose={() => setShowFeedback(false)}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={styles.medModalOverlay}>
+            <View style={[styles.medModalContainer, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+              <Text style={[styles.medModalTitle, { color: textPrimary }]}>{t('profile.share_feedback_title')}</Text>
+              <Text style={[styles.editFieldLabel, { color: textSecondary }]}>{t('profile.feedback_prompt')}</Text>
+              <TextInput
+                style={[styles.feedbackInput, { backgroundColor: inputBg, borderColor: cardBorder, color: textPrimary }]}
+                multiline
+                numberOfLines={5}
+                textAlignVertical="top"
+                placeholder={t('profile.feedback_placeholder')}
+                placeholderTextColor={textSecondary}
+                value={feedbackText}
+                onChangeText={setFeedbackText}
+              />
+              <View style={styles.medModalActions}>
+                <TouchableOpacity onPress={() => setShowFeedback(false)} style={[styles.medModalCancelBtn, { borderColor: cardBorder }]} activeOpacity={0.8}>
+                  <Text style={[styles.medModalCancelText, { color: textSecondary }]}>{t('common.cancel')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleSendFeedback} style={[styles.modalSaveBtn, { flex: 1 }]} activeOpacity={0.8}>
+                  <Text style={styles.modalSaveText}>{t('profile.send_feedback')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: Colors.background },
-  screenDark: { backgroundColor: Colors.backgroundDark },
-  scrollContent: { padding: Spacing.lg, gap: Spacing.md },
-  textPrimaryDark: { color: Colors.textPrimaryDark },
-  textSecDark: { color: Colors.textSecondaryDark },
+  screen: { flex: 1 },
+  scrollContent: { padding: Spacing.md, paddingBottom: Spacing.xxl },
 
-  header: { alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm },
-  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: FontSize.xxl, fontWeight: '800', fontFamily: FontFamily.extraBold, color: Colors.primaryDark },
-  email: { fontSize: FontSize.sm, color: Colors.textSecondary },
+  profileHeader: { alignItems: 'center', paddingVertical: Spacing.lg, gap: Spacing.sm, marginBottom: Spacing.sm },
+  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: FontSize.xxl, fontWeight: '700', fontFamily: FontFamily.bold, color: '#FFFFFF' },
+  nameDisplay: { fontSize: FontSize.md, fontWeight: '700', fontFamily: FontFamily.bold },
+  nameInput: { fontSize: FontSize.md, fontWeight: '700', fontFamily: FontFamily.bold, borderBottomWidth: 1.5, paddingVertical: 2, paddingHorizontal: 4, minWidth: 120, textAlign: 'center' },
+  emailText: { fontSize: FontSize.sm },
 
-  section: { backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, gap: Spacing.sm },
-  sectionDark: { backgroundColor: Colors.surfaceDark, borderColor: Colors.borderDark },
-  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  sectionLabel: { fontSize: FontSize.md, fontWeight: '700', fontFamily: FontFamily.bold, color: Colors.textPrimary },
-  editLink: { fontSize: FontSize.sm, color: Colors.primary, fontWeight: '600' },
-  hint: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 2 },
+  settingsCard: { borderRadius: BorderRadius.lg, borderWidth: 1, marginBottom: Spacing.md, overflow: 'hidden' },
+  settingsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm + 2, minHeight: 52 },
+  settingsRowLeft: { flex: 1, marginRight: Spacing.sm },
+  settingsRowLabel: { fontSize: FontSize.sm, fontWeight: '600', fontFamily: FontFamily.semiBold },
+  settingsRowSub: { fontSize: FontSize.xs, marginTop: 2 },
+  settingsRowValue: { fontSize: FontSize.sm, fontWeight: '600', fontFamily: FontFamily.semiBold },
+  chevron: { fontSize: 20, fontWeight: '300' },
+  rowDivider: { height: StyleSheet.hairlineWidth },
+  sectionLabel: { fontSize: FontSize.xs, fontWeight: '700', fontFamily: FontFamily.bold, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: Spacing.sm, marginTop: Spacing.xs, paddingHorizontal: Spacing.xs },
 
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', gap: Spacing.md, paddingVertical: 4 },
-  summaryLabel: { fontSize: FontSize.sm, color: Colors.textSecondary, flexShrink: 0 },
-  summaryValue: { fontSize: FontSize.sm, color: Colors.textPrimary, fontWeight: '600', flex: 1, textAlign: 'right' },
-
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: Spacing.md },
-  rowTextGroup: { flex: 1 },
-  timeRow: { marginTop: Spacing.xs },
-
-
-  deleteButton: { borderColor: Colors.error },
-
+  card: { borderRadius: BorderRadius.lg, borderWidth: 1, padding: Spacing.md, marginBottom: Spacing.md },
   premiumTeaser: { borderWidth: 1.5 },
-  premiumTeaserRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  premiumBadge: { alignSelf: 'flex-start', backgroundColor: Colors.primary, borderRadius: BorderRadius.sm, paddingHorizontal: 8, paddingVertical: 2 },
-  premiumBadgeText: { fontSize: 10, fontWeight: '800', fontFamily: FontFamily.extraBold, color: '#FFFFFF', letterSpacing: 0.5 },
+  premiumTeaserRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  premiumTeaserLeft: { flex: 1, gap: Spacing.xs },
+  premiumTeaserTitle: { fontSize: FontSize.md, fontWeight: '700', fontFamily: FontFamily.bold },
+  premiumTeaserBody: { fontSize: FontSize.sm, lineHeight: 20 },
+  premiumTeaserArrow: { fontSize: 20, fontWeight: '600', fontFamily: FontFamily.semiBold },
+  premiumBadge: { alignSelf: 'flex-start', backgroundColor: Colors.primary, paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: BorderRadius.full },
+  premiumBadgeText: { fontSize: FontSize.xs, color: '#FFFFFF', fontWeight: '700', fontFamily: FontFamily.bold },
 
-  bottomPad: { height: Spacing.xxl },
+  aiContextExpanded: { paddingHorizontal: Spacing.md, paddingBottom: Spacing.md },
+  aiContextInput: { borderWidth: 1, borderRadius: BorderRadius.sm, padding: Spacing.sm, fontSize: FontSize.sm, minHeight: 90, marginTop: Spacing.sm, marginBottom: Spacing.xs },
+  helperText: { fontSize: FontSize.xs, lineHeight: 16, marginBottom: Spacing.md },
+  saveContextBtn: { backgroundColor: Colors.primary, borderRadius: BorderRadius.md, paddingVertical: Spacing.sm, alignItems: 'center' },
+  saveContextText: { color: '#FFFFFF', fontSize: FontSize.sm, fontWeight: '700', fontFamily: FontFamily.bold },
+  cancelContextBtn: { flex: 1, borderWidth: 1, borderRadius: BorderRadius.md, paddingVertical: Spacing.sm, alignItems: 'center' },
+  cancelContextText: { fontSize: FontSize.sm, fontWeight: '600', fontFamily: FontFamily.semiBold },
+
+  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs },
+  chip: { width: 32, height: 32, borderRadius: 16, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  chipText: { fontSize: FontSize.xs, fontWeight: '600', fontFamily: FontFamily.semiBold },
+
+  medListRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
+  medInfo: { flex: 1 },
+  medName: { fontSize: FontSize.sm, fontWeight: '700', fontFamily: FontFamily.bold },
+  medMeta: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: 2, flexWrap: 'wrap' },
+  medDose: { fontSize: FontSize.xs },
+  medTime: { fontSize: FontSize.xs },
+  freqBadge: { backgroundColor: Colors.primaryLight, paddingHorizontal: 6, paddingVertical: 2, borderRadius: BorderRadius.full },
+  freqBadgeText: { fontSize: FontSize.xs, color: Colors.primaryDark, fontWeight: '600', fontFamily: FontFamily.semiBold },
+  deleteIcon: { fontSize: FontSize.sm, color: Colors.error, paddingLeft: Spacing.sm },
+
+  reportBtnRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  reportDateValue: { fontSize: FontSize.xs, fontWeight: '600', fontFamily: FontFamily.semiBold },
+  timePickerActions: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs },
+  timePickerCancel: { flex: 1, borderWidth: 1, borderRadius: BorderRadius.sm, paddingVertical: Spacing.sm, alignItems: 'center' },
+  timePickerSave: { flex: 1, backgroundColor: Colors.primary, borderRadius: BorderRadius.sm, paddingVertical: Spacing.sm, alignItems: 'center' },
+
+  deleteDataNote: { fontSize: FontSize.xs, marginTop: Spacing.xs, lineHeight: 16 },
+  aiPrivacyBody: { fontSize: FontSize.xs, lineHeight: 18 },
+  version: { fontSize: FontSize.xs, textAlign: 'center', marginTop: Spacing.sm },
+  privacyLink: { alignItems: 'center', paddingVertical: Spacing.xs, marginTop: Spacing.sm },
+  privacyLinkText: { fontSize: FontSize.xs, textDecorationLine: 'underline' },
 
   editModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md, borderBottomWidth: 1 },
   editModalTitle: { fontSize: FontSize.lg, fontWeight: '800', fontFamily: FontFamily.extraBold },
   editModalClose: { fontSize: FontSize.md, fontWeight: '600' },
   editModalContent: { padding: Spacing.lg, paddingBottom: Spacing.xxl },
   editFieldLabel: { fontSize: FontSize.sm, fontWeight: '600', fontFamily: FontFamily.semiBold, marginBottom: Spacing.xs, marginTop: Spacing.sm },
-  aiContextInput: { borderWidth: 1, borderRadius: BorderRadius.md, padding: Spacing.sm, fontSize: FontSize.sm, minHeight: 90, textAlignVertical: 'top' },
   modalSaveBtn: { backgroundColor: Colors.primary, borderRadius: BorderRadius.md, paddingVertical: Spacing.md, alignItems: 'center' },
   modalSaveText: { color: '#FFFFFF', fontSize: FontSize.lg, fontWeight: '600', fontFamily: FontFamily.semiBold },
-
-  medListRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.sm },
-  medName: { fontSize: FontSize.sm, fontWeight: '700', fontFamily: FontFamily.bold, color: Colors.textPrimary },
-  medMetaRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: 2 },
-  medDose: { fontSize: FontSize.xs, color: Colors.textSecondary },
-  medFreqBadge: { fontSize: FontSize.xs, color: Colors.textSecondary },
-  medDeleteIcon: { fontSize: FontSize.md, color: Colors.error },
-  medDoseChip: { width: 32, height: 32, borderRadius: 16, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
 
   medModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   medModalContainer: { borderTopLeftRadius: BorderRadius.xl, borderTopRightRadius: BorderRadius.xl, borderWidth: 1, padding: Spacing.lg },
@@ -1024,6 +1404,7 @@ const styles = StyleSheet.create({
   medModalActions: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md },
   medModalCancelBtn: { paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, borderRadius: BorderRadius.md, borderWidth: 1, alignItems: 'center' },
   medModalCancelText: { fontSize: FontSize.md, fontWeight: '600', fontFamily: FontFamily.semiBold },
+  feedbackInput: { borderWidth: 1, borderRadius: BorderRadius.sm, padding: Spacing.sm, fontSize: FontSize.sm, minHeight: 120, marginTop: Spacing.xs, marginBottom: Spacing.md },
 
   androidTimeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.md, marginTop: Spacing.sm },
   androidTimeCol: { alignItems: 'center', gap: Spacing.xs },
