@@ -69,6 +69,16 @@ const MEDICATIONS: Medication[] = ['low_dose_naltrexone', 'beta_blockers', 'anti
 const CHALLENGES: LifestyleChallenge[] = ['sleep', 'exercise', 'work', 'social_life', 'mental_health'];
 const FREQUENCIES: MedicationReminder['frequency'][] = ['daily', 'weekly', 'fortnightly', 'monthly'];
 
+// Commonly used for ME/CFS and its most common comorbidity, POTS/orthostatic
+// intolerance, none of these are ME/CFS-approved (there isn't one), this is a
+// starting point for the name field, not a recommendation, free text always
+// works for anything not listed here.
+const COMMON_MEDICATION_KEYS = [
+  'ldn', 'pyridostigmine', 'midodrine', 'fludrocortisone', 'propranolol',
+  'ivabradine', 'modafinil', 'amitriptyline', 'famotidine', 'melatonin',
+  'b12', 'coq10',
+] as const;
+
 function toggle<T>(arr: T[], val: T): T[] {
   return arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val];
 }
@@ -413,6 +423,28 @@ function AddMedicationModal({ visible, onClose, onSave, onUpdate, onOpenEditProf
                 ) : (
                   <Text style={[styles.medHelperText, { color: textSecondary, marginBottom: 0 }]}>{t('profile.medications.no_treatment_yet')}</Text>
                 )}
+              </View>
+            )}
+
+            {!isEditing && (
+              <View style={{ marginBottom: Spacing.md }}>
+                <Text style={[styles.editFieldLabel, { color: textSecondary, marginBottom: Spacing.xs, marginTop: 0 }]}>{t('profile.medications.common_title')}</Text>
+                <View style={styles.medChipsRow}>
+                  {COMMON_MEDICATION_KEYS.map((key) => {
+                    const label = t(`profile.medications.common.${key}`);
+                    return (
+                      <TouchableOpacity
+                        key={key}
+                        onPress={() => setName(label)}
+                        activeOpacity={0.8}
+                        style={[styles.medChip, { backgroundColor: name === label ? Colors.primary : inputBg, borderColor: name === label ? Colors.primary : cardBorder }]}
+                      >
+                        <Text style={[styles.medChipText, { color: name === label ? '#FFFFFF' : textSecondary }]}>{label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                <Text style={[styles.medHelperText, { color: textSecondary, marginBottom: 0, marginTop: 4 }]}>{t('profile.medications.common_hint')}</Text>
               </View>
             )}
 

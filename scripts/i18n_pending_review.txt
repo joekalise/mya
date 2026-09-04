@@ -687,3 +687,17 @@ insights.cache_days_ago
 insights.insight_updated
 insights.temperature_trend
 insights.temperature_trend_subtitle
+profile.medications.common_title
+profile.medications.common_hint
+profile.medications.common.ldn
+profile.medications.common.pyridostigmine
+profile.medications.common.midodrine
+profile.medications.common.fludrocortisone
+profile.medications.common.propranolol
+profile.medications.common.ivabradine
+profile.medications.common.modafinil
+profile.medications.common.amitriptyline
+profile.medications.common.famotidine
+profile.medications.common.melatonin
+profile.medications.common.b12
+profile.medications.common.coq10

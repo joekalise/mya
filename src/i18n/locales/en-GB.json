@@ -523,7 +523,23 @@
       "add_hint": "Optional. Add a specific medication only if you want a reminder for it, the toggle above is all you need for daily tracking.",
       "tracking_toggle_label": "Medication in daily log",
       "tracking_shown": "Shown in daily log",
-      "tracking_hidden": "Hidden from daily log"
+      "tracking_hidden": "Hidden from daily log",
+      "common_title": "Common medications",
+      "common_hint": "A starting point, not a recommendation. Tap to fill the name, or type your own below.",
+      "common": {
+        "ldn": "Low-dose naltrexone (LDN)",
+        "pyridostigmine": "Pyridostigmine (Mestinon)",
+        "midodrine": "Midodrine",
+        "fludrocortisone": "Fludrocortisone",
+        "propranolol": "Propranolol",
+        "ivabradine": "Ivabradine",
+        "modafinil": "Modafinil",
+        "amitriptyline": "Amitriptyline",
+        "famotidine": "Famotidine",
+        "melatonin": "Melatonin",
+        "b12": "Vitamin B12",
+        "coq10": "CoQ10"
+      }
     },
     "error_med_name": "Please enter a medication name.",
     "purchase_unavailable": "Purchase could not be completed. Please try again.",
