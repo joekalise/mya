@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/common/Button';
 import { Colors } from '@/constants/colors';
 import { FontSize, Spacing, BorderRadius, FontFamily } from '@/constants/theme';
+import { useProfile } from '@/contexts/ProfileContext';
 import { useDailyLog } from '@/hooks/useDailyLog';
 import { useEnergyEnvelope } from '@/hooks/useEnergyEnvelope';
 import { useCrashes } from '@/hooks/useCrashes';
@@ -74,8 +75,11 @@ function severityScoreColor(score: number): string {
   return Colors.success;
 }
 
-function todayDateLabel(): string {
-  return new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+function getGreetingKey(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'greeting_morning';
+  if (hour < 17) return 'greeting_afternoon';
+  return 'greeting_evening';
 }
 
 function daysSince(dateStr: string): number {
@@ -88,6 +92,7 @@ export default function TodayScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const isDark = useColorScheme() === 'dark';
+  const { profile } = useProfile();
   const { todayLog, todayLogged, isLoading: logLoading, refresh: refreshLog } = useDailyLog();
   const { available, spent, isLoading: envelopeLoading, refresh: refreshEnvelope } = useEnergyEnvelope();
   const { activeCrash, isLoading: crashLoading, refresh: refreshCrashes } = useCrashes();
@@ -113,12 +118,16 @@ export default function TodayScreen() {
 
   const overBudget = spent !== null && available !== null && spent > available;
   const fillPct = available && available > 0 ? Math.min(100, ((spent ?? 0) / available) * 100) : 0;
+  const greetingKey = getGreetingKey();
+  const firstName = profile?.preferred_name || '';
 
   return (
     <SafeAreaView style={[styles.screen, isDark && styles.screenDark]}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.headerRow}>
-          <Text style={[styles.headerDate, isDark && styles.textPrimaryDark]}>{todayDateLabel()}</Text>
+          <Text style={[styles.headerDate, isDark && styles.textPrimaryDark]} numberOfLines={2}>
+            {t(`dashboard.${greetingKey}`)}{firstName ? `, ${firstName}` : ''}
+          </Text>
           <ProfileButton />
         </View>
 

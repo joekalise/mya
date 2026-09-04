@@ -242,7 +242,9 @@
     "envelope_info": "Leonard Jason's Energy Envelope method. Available is roughly how much energy you have today before symptoms worsen. Spent is how much you actually used. Staying within your envelope (spent at or under available) is the core pacing strategy for avoiding a crash. It's not the same as your functional level or fatigue below: you can feel very fatigued on a day you haven't overspent your envelope, or have a good functional level but overspend it anyway."
   },
   "dashboard": {
-    "greeting": "Today",
+    "greeting_morning": "Good morning",
+    "greeting_afternoon": "Good afternoon",
+    "greeting_evening": "Good evening",
     "not_logged_title": "You haven't logged today",
     "not_logged_body": "Takes about a minute.",
     "log_now": "Log today",

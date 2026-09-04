@@ -592,3 +592,6 @@ dashboard.health_uv_index
 dashboard.health_air_quality
 insights.refresh
 dashboard.health_info_message
+dashboard.greeting_morning
+dashboard.greeting_afternoon
+dashboard.greeting_evening
