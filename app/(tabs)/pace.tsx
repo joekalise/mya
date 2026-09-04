@@ -222,27 +222,29 @@ export default function PaceScreen() {
             </View>
 
             <View style={[styles.section, isDark && styles.sectionDark]}>
-              <View style={styles.sectionHeaderRow}>
-                <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark, { marginBottom: 0 }]}>{t('tracker.bell_score_today')}</Text>
-                <InfoButton title={t('tracker.bell_score_info_title')} message={t('tracker.bell_score_info_message')} />
-              </View>
-              <DragSlider value={bellScore} onChange={setBellScore} isDark={isDark} min={0} max={100} step={10} invertColor />
-              <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('tracker.bell_score_hint')}</Text>
-            </View>
+              <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('tracker.symptoms_today')}</Text>
 
-            <View style={[styles.section, isDark && styles.sectionDark]}>
-              <View style={styles.sectionHeaderRow}>
-                <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark, { marginBottom: 0 }]}>{t('tracker.fatigue_score')}</Text>
-                <InfoButton title={t('tracker.fatigue_score_info_title')} message={t('tracker.fatigue_score_info_message')} />
+              <View style={styles.symptomSubSection}>
+                <Text style={[styles.symptomSubLabel, isDark && styles.textSecDark]}>{t('tracker.bell_score_today')}</Text>
+                <DragSlider value={bellScore} onChange={setBellScore} isDark={isDark} min={0} max={100} step={10} invertColor />
+                <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('tracker.bell_score_hint')}</Text>
               </View>
-              <DragSlider value={fatigueScore} onChange={setFatigueScore} isDark={isDark} />
-              <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('tracker.fatigue_score_hint')}</Text>
-            </View>
 
-            <View style={[styles.section, isDark && styles.sectionDark]}>
-              <Text style={[styles.sectionLabel, isDark && styles.textPrimaryDark]}>{t('tracker.cognitive_dysfunction_score')}</Text>
-              <DragSlider value={cognitiveScore} onChange={setCognitiveScore} isDark={isDark} />
-              <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('tracker.cognitive_dysfunction_score_hint')}</Text>
+              <View style={[styles.symptomDivider, isDark && styles.symptomDividerDark]} />
+
+              <View style={styles.symptomSubSection}>
+                <Text style={[styles.symptomSubLabel, isDark && styles.textSecDark]}>{t('tracker.fatigue_score')}</Text>
+                <DragSlider value={fatigueScore} onChange={setFatigueScore} isDark={isDark} />
+                <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('tracker.fatigue_score_hint')}</Text>
+              </View>
+
+              <View style={[styles.symptomDivider, isDark && styles.symptomDividerDark]} />
+
+              <View style={styles.symptomSubSection}>
+                <Text style={[styles.symptomSubLabel, isDark && styles.textSecDark]}>{t('tracker.brain_fog_score')}</Text>
+                <DragSlider value={cognitiveScore} onChange={setCognitiveScore} isDark={isDark} />
+                <Text style={[styles.hint, isDark && styles.textSecDark]}>{t('tracker.brain_fog_score_hint')}</Text>
+              </View>
             </View>
 
             <View style={[styles.section, isDark && styles.sectionDark, styles.pemSection]}>
@@ -458,6 +460,11 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: Spacing.xs },
   hint: { fontSize: FontSize.xs, color: Colors.textSecondary },
   overBudgetText: { fontSize: FontSize.sm, color: Colors.error, fontWeight: '600' },
+
+  symptomSubSection: { gap: Spacing.sm },
+  symptomSubLabel: { fontSize: FontSize.sm, fontWeight: '600', fontFamily: FontFamily.semiBold, color: Colors.textSecondary },
+  symptomDivider: { height: 1, backgroundColor: Colors.border, marginVertical: Spacing.xs },
+  symptomDividerDark: { backgroundColor: Colors.borderDark },
 
   pemSection: { borderColor: Colors.error + '50' },
   pemLabel: { marginBottom: 0 },

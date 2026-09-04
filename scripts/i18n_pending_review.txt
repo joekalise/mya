@@ -459,3 +459,6 @@ insights.streak_days_other
 insights.no_data
 insights.chart_fills_out
 insights.disclaimer
+tracker.symptoms_today
+tracker.brain_fog_score
+tracker.brain_fog_score_hint
