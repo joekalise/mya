@@ -102,6 +102,7 @@ export default function DsqSfScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={[styles.subtitle, isDark && styles.textSecDark]}>{t('dsq_sf.subtitle')}</Text>
+        <Text style={[styles.disclaimer, isDark && styles.textSecDark]}>{t('dsq_sf.disclaimer')}</Text>
 
         <View style={[styles.legendCard, isDark && styles.legendCardDark]}>
           <Text style={[styles.legendLabel, isDark && styles.textPrimaryDark]}>{t('dsq_sf.frequency_label')}</Text>
@@ -179,5 +180,6 @@ const styles = StyleSheet.create({
 
   saveButton: { marginTop: Spacing.sm },
   attribution: { fontSize: FontSize.xs, color: Colors.textSecondary, textAlign: 'center', lineHeight: 16, fontStyle: 'italic' },
+  disclaimer: { fontSize: FontSize.xs, color: Colors.textSecondary, lineHeight: 16, marginTop: Spacing.xs, marginBottom: Spacing.md },
   bottomPad: { height: Spacing.xxl },
 });

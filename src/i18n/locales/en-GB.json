@@ -443,6 +443,7 @@
   "dsq_sf": {
     "title": "DSQ-SF Assessment",
     "subtitle": "For each symptom, rate how often it has bothered you over the past 6 months, and how severe it was.",
+    "disclaimer": "This is a self-report screening tool, not a diagnosis. Always consult a healthcare professional about your symptoms and any medical decisions.",
     "frequency_label": "Frequency",
     "frequency_legend": "0 = none of the time, 4 = all of the time",
     "severity_label": "Severity",

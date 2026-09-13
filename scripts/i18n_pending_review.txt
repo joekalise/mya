@@ -738,3 +738,4 @@ notifications.nudge_orthostatic_title
 notifications.nudge_orthostatic_body
 notifications.nudge_sleep_title
 notifications.nudge_sleep_body
+dsq_sf.disclaimer
