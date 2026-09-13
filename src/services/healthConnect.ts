@@ -28,16 +28,16 @@ function getHC(): any | null {
   }
 }
 
+// Active calories, exercise sessions, and mindfulness minutes were dropped
+// (see the Play Store "excessive data access" rejection) — fetched but never
+// surfaced anywhere in the app, so they couldn't be justified as required.
 const PERMISSIONS: Array<{ accessType: 'read'; recordType: string }> = [
   { accessType: 'read', recordType: 'Steps' },
   { accessType: 'read', recordType: 'SleepSession' },
   { accessType: 'read', recordType: 'HeartRate' },
   { accessType: 'read', recordType: 'HeartRateVariabilityRmssd' },
-  { accessType: 'read', recordType: 'ActiveCaloriesBurned' },
-  { accessType: 'read', recordType: 'ExerciseSession' },
   { accessType: 'read', recordType: 'OxygenSaturation' },
   { accessType: 'read', recordType: 'RespiratoryRate' },
-  { accessType: 'read', recordType: 'MindfulnessSession' },
 ];
 
 export async function isHealthKitAvailable(): Promise<boolean> {
@@ -219,20 +219,6 @@ export async function fetchTodayHealthData(
     }
   } catch {}
 
-  // Active calories
-  try {
-    const { records } = await hc.readRecords('ActiveCaloriesBurned', dayFilter);
-    base.active_calories = Math.round(
-      records.reduce((sum: number, r: any) => sum + (r.energy?.inKilocalories ?? 0), 0)
-    );
-  } catch {}
-
-  // Workouts — count sessions
-  try {
-    const { records } = await hc.readRecords('ExerciseSession', dayFilter);
-    base.workouts = records.length;
-  } catch {}
-
   return base;
 }
 
@@ -241,7 +227,7 @@ export async function fetchTodayRecoveryData(date: string): Promise<RecoverySnap
   const base: RecoverySnapshot = {
     oxygen_saturation: null,
     respiratory_rate: null,
-    mindful_minutes: null,
+    mindful_minutes: null, // Android no longer requests Mindfulness — stays null here.
   };
 
   if (!hc) return base;
@@ -271,22 +257,6 @@ export async function fetchTodayRecoveryData(date: string): Promise<RecoverySnap
     if (records.length > 0) {
       const avg = records.reduce((sum: number, r: any) => sum + r.rate, 0) / records.length;
       base.respiratory_rate = Math.round(avg * 10) / 10;
-    }
-  } catch {}
-
-  // Mindful minutes — total session duration today
-  try {
-    const dayStart = new Date(`${date}T00:00:00`).toISOString();
-    const dayEnd = new Date(`${date}T23:59:59`).toISOString();
-    const { records } = await hc.readRecords('MindfulnessSession', {
-      timeRangeFilter: { operator: 'between', startTime: dayStart, endTime: dayEnd },
-    });
-    if (records.length > 0) {
-      const totalMs = records.reduce(
-        (sum: number, r: any) => sum + (new Date(r.endTime).getTime() - new Date(r.startTime).getTime()),
-        0
-      );
-      base.mindful_minutes = Math.round(totalMs / 60000) || null;
     }
   } catch {}
 

@@ -125,7 +125,7 @@ module.exports = {
       package: 'com.myaapp.app',
       // Explicit rather than eas.json's autoIncrement, which doesn't reliably
       // write back into a dynamic (JS) app config. Bump by hand each Android build.
-      versionCode: 1,
+      versionCode: 2,
       // TODO: add once the Firebase project exists (see infra checklist)
       // ...(isAndroid && { googleServicesFile: './google-services.json' }),
       permissions: [
@@ -138,11 +138,8 @@ module.exports = {
         'android.permission.health.READ_SLEEP',
         'android.permission.health.READ_HEART_RATE',
         'android.permission.health.READ_HEART_RATE_VARIABILITY',
-        'android.permission.health.READ_ACTIVE_CALORIES_BURNED',
-        'android.permission.health.READ_EXERCISE',
         'android.permission.health.READ_OXYGEN_SATURATION',
         'android.permission.health.READ_RESPIRATORY_RATE',
-        'android.permission.health.READ_MINDFULNESS',
       ],
     },
     plugins: [
