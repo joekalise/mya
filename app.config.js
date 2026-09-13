@@ -123,9 +123,9 @@ module.exports = {
         backgroundColor: '#F97316',
       },
       package: 'com.myaapp.app',
-      // Explicit rather than eas.json's autoIncrement, which doesn't reliably
-      // write back into a dynamic (JS) app config. Bump by hand each Android build.
-      versionCode: 3,
+      // No versionCode here — appVersionSource is "remote" in eas.json, which
+      // ignores this field entirely and increments it remotely instead (see
+      // production-android's autoIncrement).
       // TODO: add once the Firebase project exists (see infra checklist)
       // ...(isAndroid && { googleServicesFile: './google-services.json' }),
       permissions: [
