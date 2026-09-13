@@ -28,16 +28,16 @@ function getHC(): any | null {
   }
 }
 
-// Active calories, exercise sessions, and mindfulness minutes were dropped
-// (see the Play Store "excessive data access" rejection) — fetched but never
-// surfaced anywhere in the app, so they couldn't be justified as required.
+// Active calories, exercise sessions, mindfulness minutes, SpO2, and
+// respiratory rate were all dropped (see the Play Store "excessive data
+// access" rejection) — none had a user-visible feature, only fed text into
+// the AI insight prompt or went unused entirely. Heart rate and HRV stay:
+// both show as visible tiles on Today and feed the crash-risk signals.
 const PERMISSIONS: Array<{ accessType: 'read'; recordType: string }> = [
   { accessType: 'read', recordType: 'Steps' },
   { accessType: 'read', recordType: 'SleepSession' },
   { accessType: 'read', recordType: 'HeartRate' },
   { accessType: 'read', recordType: 'HeartRateVariabilityRmssd' },
-  { accessType: 'read', recordType: 'OxygenSaturation' },
-  { accessType: 'read', recordType: 'RespiratoryRate' },
 ];
 
 export async function isHealthKitAvailable(): Promise<boolean> {
@@ -222,43 +222,12 @@ export async function fetchTodayHealthData(
   return base;
 }
 
-export async function fetchTodayRecoveryData(date: string): Promise<RecoverySnapshot> {
-  const hc = getHC();
-  const base: RecoverySnapshot = {
-    oxygen_saturation: null,
-    respiratory_rate: null,
-    mindful_minutes: null, // Android no longer requests Mindfulness — stays null here.
-  };
-
-  if (!hc) return base;
-
-  // Sleep window: previous evening 20:00 → current morning 10:00.
-  // SpO2 and respiratory rate are most meaningful during sleep, same as iOS.
-  const sleepStart = new Date(`${date}T00:00:00`);
-  sleepStart.setDate(sleepStart.getDate() - 1);
-  sleepStart.setHours(20, 0, 0, 0);
-  const sleepEnd = new Date(`${date}T10:00:00`);
-  const sleepFilter = {
-    timeRangeFilter: { operator: 'between' as const, startTime: sleepStart.toISOString(), endTime: sleepEnd.toISOString() },
-  };
-
-  // SpO2 — average overnight reading. Health Connect reports 0-100 already.
-  try {
-    const { records } = await hc.readRecords('OxygenSaturation', sleepFilter);
-    if (records.length > 0) {
-      const avg = records.reduce((sum: number, r: any) => sum + r.percentage, 0) / records.length;
-      base.oxygen_saturation = Math.round(avg);
-    }
-  } catch {}
-
-  // Respiratory rate — average overnight reading
-  try {
-    const { records } = await hc.readRecords('RespiratoryRate', sleepFilter);
-    if (records.length > 0) {
-      const avg = records.reduce((sum: number, r: any) => sum + r.rate, 0) / records.length;
-      base.respiratory_rate = Math.round(avg * 10) / 10;
-    }
-  } catch {}
-
-  return base;
+// Android requests none of SpO2/respiratory rate/mindfulness (dropped for the
+// Play Store "excessive data access" rejection — none had a user-visible
+// feature, only fed text into the AI insight prompt). Kept as a stub
+// returning nulls since the shared services/health.ts facade expects every
+// platform module to export this function. iOS still populates these via
+// HealthKit, which isn't subject to this policy.
+export async function fetchTodayRecoveryData(_date: string): Promise<RecoverySnapshot> {
+  return { oxygen_saturation: null, respiratory_rate: null, mindful_minutes: null };
 }
